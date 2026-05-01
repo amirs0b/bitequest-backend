@@ -1,7 +1,10 @@
-// Auth Routes
-const express = require('express');
-const router = express.Router();
+import express from "express";
+import {login, getMe} from "../../Controllers/AuthCn.js";
+import {protect} from "../../Middlewares/Auth.js";
 
-// Auth routes
+const authRouter = express.Router();
 
-module.exports = router;
+authRouter.route("/").post(login);
+authRouter.route("/me").get(protect, getMe);
+
+export default authRouter;
