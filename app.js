@@ -4,8 +4,7 @@ import {fileURLToPath} from "url";
 import path from "path";
 import morgan from "morgan";
 import {catchError, HandleERROR} from "vanta-api";
-import authRouter from "./Routes/V1/Auth.js";
-import userRouter from "./Routes/V1/User.js";
+
 
 
 
@@ -20,8 +19,7 @@ app.use(morgan("dev"))
 app.use(express.static('Public'))
 
 
-app.use("/api/v1/auth", authRouter)
-app.use("/api/v1/users", userRouter)
+
 
 
 
