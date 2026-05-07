@@ -1,34 +1,38 @@
 import mongoose from "mongoose";
 
-const activityLogSchema = new mongoose.Schema({
-    restaurantId: {
+const auditLogSchema = new mongoose.Schema({
+    tenantId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Restaurant",
+        ref: "Tenant",
         default: null
     },
-    userId: { // برای لاگ کارهای مدیران و پرسنل
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        default: null
+    category: {
+        type: String,
+        enum: ["security", "kpi", "system"],
+        required: [true, "Log category is required"]
     },
-    customerId: { // برای لاگ بازی‌های مشتریان رستوران
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Customer",
-        default: null
-    },
-    actionType: {
+    action: {
         type: String,
         required: [true, "Action type is required"]
-        // مثال: "GAME_PLAYED", "DISCOUNT_GENERATED", "MENU_UPDATED"
     },
-    description: {
-        type: String
+    actorId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        refPath: "actorModel"
     },
-    // معدن اصلی KPIهای داینامیک اینجاست!
+    actorModel: {
+        type: String,
+        required: true,
+        enum: ["User", "Customer"]
+    },
+    target: {
+        type: String,
+        default: ""
+    },
     metadata: {
         type: mongoose.Schema.Types.Mixed
     }
-}, {timestamps: true})
+}, { timestamps: true });
 
-const ActivityLog = mongoose.model("ActivityLog", activityLogSchema)
-export default ActivityLog
+const AuditLog = mongoose.model("AuditLog", auditLogSchema);
+export default AuditLog;

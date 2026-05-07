@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
 
 const transactionSchema = new mongoose.Schema({
-    restaurantId: {
+    tenantId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Restaurant",
-        required: [true, "Restaurant ID is required"]
+        ref: "Tenant",
+        required: [true, "Tenant ID is required"]
     },
     amount: {
         type: Number,
@@ -12,18 +12,18 @@ const transactionSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ["SUBSCRIPTION_PRO", "SUBSCRIPTION_BASIC", "SMS_WALLET_TOPUP"],
+        enum: ["subscription_renewal", "sms_wallet_charge"],
         required: [true, "Transaction type is required"]
     },
     status: {
         type: String,
-        enum: ["PENDING", "SUCCESS", "FAILED"],
-        default: "PENDING"
+        enum: ["pending", "success", "failed"],
+        default: "pending"
     },
     referenceId: {
-        type: String // کدرهگیری درگاه بانکی
+        type: String
     }
-}, {timestamps: true})
+}, { timestamps: true });
 
-const Transaction = mongoose.model("Transaction", transactionSchema)
-export default Transaction
+const Transaction = mongoose.model("Transaction", transactionSchema);
+export default Transaction;
