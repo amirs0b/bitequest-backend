@@ -1,5 +1,5 @@
 import Cart from "../Models/CartMd.js";
-import Transaction from "../Models/TransactionMd.js";
+import Order from "../Models/OrderMd.js"; // 👈 استفاده از Order به جای Transaction
 import Voucher from "../Models/VoucherMd.js";
 import { catchAsync, HandleERROR } from "vanta-api";
 
@@ -67,7 +67,7 @@ export const getActiveCart = catchAsync(async (req, res, next) => {
 });
 
 // ------------------------------------------------------------------
-// 3. نهایی‌سازی توسط گارسون (تبدیل تعامل به تحلیل مالی)
+// 3. نهایی‌سازی توسط گارسون (تبدیل تعامل به فاکتور فروش)
 // ------------------------------------------------------------------
 export const finalizeOrder = catchAsync(async (req, res, next) => {
     const { cartId } = req.params;
@@ -78,13 +78,19 @@ export const finalizeOrder = catchAsync(async (req, res, next) => {
         return next(new HandleERROR("Active cart not found", 404));
     }
 
-    // 1. ثبت در جدول تراکنش‌ها برای تحلیل‌های مالی و سودآوری
-    await Transaction.create({
+    if (!req.body.finalAmount) {
+        return next(new HandleERROR("Final amount is required to finalize the order", 400));
+    }
+
+    // 1. ثبت در جدول Order (فاکتور فروش)
+    await Order.create({
         tenantId: cart.tenantId,
         customerId: cart.customerId,
+        cartId: cart._id,
         items: cart.items,
         voucherId: cart.voucherId,
-        finalAmount: req.body.finalAmount // مبلغی که گارسون در صندوق وارد کرده است
+        finalAmount: req.body.finalAmount, // مبلغی که گارسون در صندوق وارد کرده است
+        servedBy: req.user ? req.user.id : null // ثبت آیدی پرسنلی که سفارش را نهایی کرده
     });
 
     // 2. اگر کدتخفیفی استفاده شده، آن را باطل می‌کنیم
@@ -102,6 +108,6 @@ export const finalizeOrder = catchAsync(async (req, res, next) => {
 
     return res.status(200).json({
         success: true,
-        message: "Order finalized and archived for analysis"
+        message: "Order finalized and archived successfully"
     });
 });

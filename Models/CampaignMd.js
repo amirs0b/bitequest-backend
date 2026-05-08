@@ -11,7 +11,8 @@ const campaignSchema = new mongoose.Schema({
         required: [true, "Campaign title is required"]
     },
     description: {
-        type: String
+        type: String,
+        default: ""
     },
     startDate: {
         type: Date,
@@ -29,6 +30,17 @@ const campaignSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    conditions: {
+        minCartValue: { type: Number, default: 0 },
+        validDays: [{
+            type: String,
+            enum: ["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday", "friday"]
+        }],
+        validHours: {
+            start: { type: String, default: "00:00" },
+            end: { type: String, default: "23:59" }
+        }
+    },
     questions: [{
         questionText: { type: String, required: true },
         options: [{ type: String, required: true }],
@@ -39,7 +51,7 @@ const campaignSchema = new mongoose.Schema({
         discountPercentage: { type: Number, required: true },
         maxDiscountAmount: { type: Number, default: 0 },
         validityDays: { type: Number, default: 7 },
-        posCode: { type: String, default: null } // 👈 فیلد جدید: کد تعریف شده در سیستم حسابداری رستوران
+        posCode: { type: String, default: null } // کد تعریف شده در سیستم حسابداری رستوران
     }]
 }, { timestamps: true });
 
