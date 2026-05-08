@@ -24,7 +24,11 @@ const menuItemSchema = new mongoose.Schema({
     },
     isAvailable: {
         type: Boolean,
-        default: true
+        default: true // برای زمانی که غذا در همان روز موقتاً تمام شده است (Sold Out)
+    },
+    isArchived: {
+        type: Boolean,
+        default: false // برای زمانی که مدیر کلا غذا را از منوی رستوران حذف/بایگانی می‌کند
     }
 }, { timestamps: true });
 

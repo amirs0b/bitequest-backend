@@ -6,6 +6,8 @@ import morgan from "morgan";
 import {catchError, HandleERROR} from "vanta-api";
 import authRouter from "./Routes/Auth.js";
 import tenantRouter from "./Routes/Tenant.js";
+import userRouter from "./Routes/User.js";
+import menuRouter from "./Routes/Menu.js";
 
 
 
@@ -22,6 +24,8 @@ app.use(express.static('Public'))
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/tenants", tenantRouter);
+app.use("/api/v1/users", userRouter);
+app.use("/api/v1/menu", menuRouter);
 
 
 
