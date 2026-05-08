@@ -1,63 +1,89 @@
 import Cart from "../Models/CartMd.js";
-import Order from "../Models/OrderMd.js"; // 👈 استفاده از Order به جای Transaction
+import Order from "../Models/OrderMd.js";
 import Voucher from "../Models/VoucherMd.js";
+import MenuItem from "../Models/MenuMd.js";
 import { catchAsync, HandleERROR } from "vanta-api";
 
 // ------------------------------------------------------------------
-// 1. همگام‌سازی سبد (ذخیره رفتار مشتری و انتخاب‌ها)
+// 1. همگام‌سازی سبد (ذخیره انتخاب‌های مشتری با امنیت قیمت)
 // ------------------------------------------------------------------
 export const syncCart = catchAsync(async (req, res, next) => {
     const { items, voucherId, tenantId } = req.body;
     const customerId = req.customer.id;
 
-    // پیدا کردن سبد فعال فعلی مشتری در این رستوران
-    let cart = await Cart.findOne({
-        customerId,
-        tenantId,
-        status: "active"
+    const menuItemIds = items.map(i => i.menuItemId);
+    const dbMenuItems = await MenuItem.find({ _id: { $in: menuItemIds }, tenantId });
+
+    let cartTotal = 0;
+    const secureItems = items.map(item => {
+        const dbItem = dbMenuItems.find(dbI => dbI._id.toString() === item.menuItemId.toString());
+        if (!dbItem) throw new HandleERROR(`Menu item ${item.menuItemId} not found`, 404);
+
+        cartTotal += (dbItem.price * item.quantity);
+
+        return {
+            menuItemId: dbItem._id,
+            name: dbItem.name,
+            price: dbItem.price,
+            quantity: item.quantity
+        };
     });
 
+    let validVoucherId = null;
+    if (voucherId) {
+        const voucher = await Voucher.findOne({
+            _id: voucherId,
+            customerId,
+            tenantId,
+            isUsed: false,
+            expiresAt: { $gte: new Date() }
+        }).populate('campaignId');
+
+        if (!voucher) {
+            return next(new HandleERROR("This voucher is invalid or expired.", 400));
+        }
+
+        if (voucher.campaignId && cartTotal < voucher.campaignId.conditions.minCartValue) {
+            return next(new HandleERROR(`Minimum order for this discount is ${voucher.campaignId.conditions.minCartValue}`, 400));
+        }
+
+        validVoucherId = voucher._id;
+    }
+
+    let cart = await Cart.findOne({ customerId, tenantId, status: "active" });
+
     if (cart) {
-        // بروزرسانی سبد موجود با انتخاب‌های جدید (ثبت رفتار لحظه‌ای)
-        cart.items = items;
-        cart.voucherId = voucherId || cart.voucherId;
+        cart.items = secureItems;
+        if (voucherId !== undefined) cart.voucherId = validVoucherId;
         await cart.save();
     } else {
-        // ایجاد یک سبد جدید برای شروع تعامل در این رستوران
         cart = await Cart.create({
             tenantId,
             customerId,
-            items,
-            voucherId
+            items: secureItems,
+            voucherId: validVoucherId
         });
     }
 
     return res.status(200).json({
         success: true,
-        message: "Customer interaction synced successfully",
+        message: "Cart synced",
         data: { cart }
     });
 });
 
 // ------------------------------------------------------------------
-// 2. دریافت سبد فعال (برای نمایش به مشتری و گارسون)
+// 2. دریافت سبد فعال (نمایش فاکتور تعاملی به مشتری)
 // ------------------------------------------------------------------
 export const getActiveCart = catchAsync(async (req, res, next) => {
     const { tenantId } = req.query;
-    const customerId = req.customer ? req.customer.id : req.query.customerId;
+    const customerId = req.customer.id;
 
-    if (!customerId || !tenantId) {
-        return next(new HandleERROR("Customer ID and Tenant ID are required", 400));
-    }
-
-    const cart = await Cart.findOne({
-        customerId,
-        tenantId,
-        status: "active"
-    }).populate('items.menuItemId').populate('voucherId');
+    const cart = await Cart.findOne({ customerId, tenantId, status: "active" })
+        .populate('voucherId');
 
     if (!cart) {
-        return next(new HandleERROR("No active interaction found for this customer", 404));
+        return next(new HandleERROR("Your cart is empty", 404));
     }
 
     return res.status(200).json({
@@ -67,47 +93,62 @@ export const getActiveCart = catchAsync(async (req, res, next) => {
 });
 
 // ------------------------------------------------------------------
-// 3. نهایی‌سازی توسط گارسون (تبدیل تعامل به فاکتور فروش)
+// 3. نهایی‌سازی سفارش توسط مشتری (تولید خروجی برای نمایش به گارسون)
 // ------------------------------------------------------------------
 export const finalizeOrder = catchAsync(async (req, res, next) => {
     const { cartId } = req.params;
+    const customerId = req.customer.id;
 
-    // پیدا کردن سبد خرید فعال
-    const cart = await Cart.findById(cartId);
-    if (!cart || cart.status !== "active") {
+    // پیدا کردن سبد فعال متعلق به خود مشتری
+    const cart = await Cart.findOne({ _id: cartId, customerId, status: "active" }).populate('voucherId');
+
+    if (!cart) {
         return next(new HandleERROR("Active cart not found", 404));
     }
 
-    if (!req.body.finalAmount) {
-        return next(new HandleERROR("Final amount is required to finalize the order", 400));
+    // محاسبه مبالغ نهایی برای ثبت در تاریخچه (Order)
+    let totalAmount = 0;
+    cart.items.forEach(item => totalAmount += (item.price * item.quantity));
+
+    let discountAmount = 0;
+    if (cart.voucherId) {
+        discountAmount = (totalAmount * cart.voucherId.discountPercentage) / 100;
+        if (cart.voucherId.maxDiscountAmount > 0 && discountAmount > cart.voucherId.maxDiscountAmount) {
+            discountAmount = cart.voucherId.maxDiscountAmount;
+        }
     }
 
-    // 1. ثبت در جدول Order (فاکتور فروش)
-    await Order.create({
+    // 1. ایجاد رکورد نهایی در OrderMd (ثبت برای تحلیل‌های آتی)
+    const finalizedOrder = await Order.create({
         tenantId: cart.tenantId,
         customerId: cart.customerId,
         cartId: cart._id,
         items: cart.items,
-        voucherId: cart.voucherId,
-        finalAmount: req.body.finalAmount, // مبلغی که گارسون در صندوق وارد کرده است
-        servedBy: req.user ? req.user.id : null // ثبت آیدی پرسنلی که سفارش را نهایی کرده
+        voucherId: cart.voucherId ? cart.voucherId._id : null,
+        totalAmount,
+        discountAmount,
+        finalAmount: totalAmount - discountAmount
     });
 
-    // 2. اگر کدتخفیفی استفاده شده، آن را باطل می‌کنیم
+    // 2. ابطال کدتخفیف و آرشیو کردن سبد
     if (cart.voucherId) {
-        await Voucher.findByIdAndUpdate(cart.voucherId, {
+        await Voucher.findByIdAndUpdate(cart.voucherId._id, {
             isUsed: true,
             usedAt: new Date()
         });
     }
 
-    // 3. تغییر وضعیت سبد به نهایی و آرشیو کردن آن (هرگز پاک نمی‌شود)
     cart.status = "finalized";
     cart.isArchived = true;
     await cart.save();
 
+    // 3. ارسال دیتای کامل به فرانت‌اند برای نمایش لیست نهایی و انیمیشن به گارسون
     return res.status(200).json({
         success: true,
-        message: "Order finalized and archived successfully"
+        message: "Order ready for waiter",
+        data: {
+            orderSummary: finalizedOrder,
+            posCode: cart.voucherId ? cart.voucherId.posCode : null // 👈 کد مخصوص صندوق
+        }
     });
 });

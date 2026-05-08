@@ -4,16 +4,14 @@ import { protect, restrictTo } from "../Middlewares/AuthMw.js";
 
 const cartRouter = express.Router();
 
-// تمام عملیات سبد خرید نیاز به احراز هویت دارد
+// تمام عملیات سبد خرید نیاز به لاگین دارند
 cartRouter.use(protect);
 
-// 1. روت‌های مخصوص مشتری (ثبت رفتار و مشاهده سبد خودش)
+// -----------------------------------------------------------
+// روت‌های مخصوص مشتری (ثبت رفتار و نهایی‌سازی شخصی)
+// -----------------------------------------------------------
 cartRouter.post("/sync", restrictTo("customer"), syncCart);
-cartRouter.get("/my-active-cart", getActiveCart);
-
-// 2. روت‌های مخصوص گارسون و مدیر رستوران (مشاهده سبد مشتری و نهایی‌سازی)
-// گارسون با داشتن آیدی مشتری یا آیدی سبد، سفارش را نهایی می‌کند
-cartRouter.get("/view-customer-cart", restrictTo("owner", "manager", "cashier", "staff"), getActiveCart);
-cartRouter.post("/finalize/:cartId", restrictTo("owner", "manager", "cashier", "staff"), finalizeOrder);
+cartRouter.get("/my-active-cart", restrictTo("customer"), getActiveCart);
+cartRouter.post("/finalize/:cartId", restrictTo("customer"), finalizeOrder); // 👈 مشتری خودش تایید می‌کند
 
 export default cartRouter;
