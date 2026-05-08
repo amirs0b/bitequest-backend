@@ -1,16 +1,17 @@
 import Cart from "../Models/CartMd.js";
 import Order from "../Models/OrderMd.js";
 import Voucher from "../Models/VoucherMd.js";
-import MenuItem from "../Models/MenuMd.js";
+import MenuItem from "../Models/MenuMd.js"; // وارد کردن مدل منو برای چک کردن قیمت واقعی
 import { catchAsync, HandleERROR } from "vanta-api";
 
 // ------------------------------------------------------------------
-// 1. همگام‌سازی سبد (ذخیره انتخاب‌های مشتری با امنیت قیمت)
+// 1. همگام‌سازی سبد (ذخیره انتخاب‌های مشتری با امنیت کامل قیمت)
 // ------------------------------------------------------------------
 export const syncCart = catchAsync(async (req, res, next) => {
     const { items, voucherId, tenantId } = req.body;
     const customerId = req.customer.id;
 
+    // 🔒 استخراج قیمت و نام واقعی غذاها از دیتابیس (عدم اعتماد به کلاینت)
     const menuItemIds = items.map(i => i.menuItemId);
     const dbMenuItems = await MenuItem.find({ _id: { $in: menuItemIds }, tenantId });
 
@@ -29,6 +30,7 @@ export const syncCart = catchAsync(async (req, res, next) => {
         };
     });
 
+    // 🔒 اعتبارسنجی ووچر و بررسی شروط کمپین (مثل حداقل مبلغ خرید)
     let validVoucherId = null;
     if (voucherId) {
         const voucher = await Voucher.findOne({
@@ -67,13 +69,13 @@ export const syncCart = catchAsync(async (req, res, next) => {
 
     return res.status(200).json({
         success: true,
-        message: "Cart synced",
+        message: "Cart synced securely",
         data: { cart }
     });
 });
 
 // ------------------------------------------------------------------
-// 2. دریافت سبد فعال (نمایش فاکتور تعاملی به مشتری)
+// 2. دریافت سبد فعال (نمایش پیش‌فاکتور به مشتری)
 // ------------------------------------------------------------------
 export const getActiveCart = catchAsync(async (req, res, next) => {
     const { tenantId } = req.query;
@@ -93,20 +95,19 @@ export const getActiveCart = catchAsync(async (req, res, next) => {
 });
 
 // ------------------------------------------------------------------
-// 3. نهایی‌سازی سفارش توسط مشتری (تولید خروجی برای نمایش به گارسون)
+// 3. نهایی‌سازی سفارش (توسط خود مشتری برای نمایش به گارسون)
 // ------------------------------------------------------------------
 export const finalizeOrder = catchAsync(async (req, res, next) => {
     const { cartId } = req.params;
     const customerId = req.customer.id;
 
-    // پیدا کردن سبد فعال متعلق به خود مشتری
     const cart = await Cart.findOne({ _id: cartId, customerId, status: "active" }).populate('voucherId');
 
     if (!cart) {
         return next(new HandleERROR("Active cart not found", 404));
     }
 
-    // محاسبه مبالغ نهایی برای ثبت در تاریخچه (Order)
+    // 🧮 محاسبه هوشمند مبالغ نهایی برای ثبت در تاریخچه سفارشات
     let totalAmount = 0;
     cart.items.forEach(item => totalAmount += (item.price * item.quantity));
 
@@ -118,7 +119,7 @@ export const finalizeOrder = catchAsync(async (req, res, next) => {
         }
     }
 
-    // 1. ایجاد رکورد نهایی در OrderMd (ثبت برای تحلیل‌های آتی)
+    // ثبت فاکتور قطعی برای تحلیل‌های مدیر
     const finalizedOrder = await Order.create({
         tenantId: cart.tenantId,
         customerId: cart.customerId,
@@ -130,7 +131,7 @@ export const finalizeOrder = catchAsync(async (req, res, next) => {
         finalAmount: totalAmount - discountAmount
     });
 
-    // 2. ابطال کدتخفیف و آرشیو کردن سبد
+    // باطل کردن کد تخفیف
     if (cart.voucherId) {
         await Voucher.findByIdAndUpdate(cart.voucherId._id, {
             isUsed: true,
@@ -138,17 +139,18 @@ export const finalizeOrder = catchAsync(async (req, res, next) => {
         });
     }
 
+    // آرشیو کردن سبد خرید
     cart.status = "finalized";
     cart.isArchived = true;
     await cart.save();
 
-    // 3. ارسال دیتای کامل به فرانت‌اند برای نمایش لیست نهایی و انیمیشن به گارسون
+    // خروجی برای صفحه جذاب موبایل مشتری (نمایش فاکتور و کد سیستم حسابداری به گارسون)
     return res.status(200).json({
         success: true,
         message: "Order ready for waiter",
         data: {
             orderSummary: finalizedOrder,
-            posCode: cart.voucherId ? cart.voucherId.posCode : null // 👈 کد مخصوص صندوق
+            posCode: cart.voucherId ? cart.voucherId.posCode : null
         }
     });
 });

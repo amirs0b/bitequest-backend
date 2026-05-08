@@ -8,10 +8,12 @@ const cartRouter = express.Router();
 cartRouter.use(protect);
 
 // -----------------------------------------------------------
-// روت‌های مخصوص مشتری (ثبت رفتار و نهایی‌سازی شخصی)
+// روت‌های یکپارچه و مشتری‌محور
 // -----------------------------------------------------------
 cartRouter.post("/sync", restrictTo("customer"), syncCart);
 cartRouter.get("/my-active-cart", restrictTo("customer"), getActiveCart);
-cartRouter.post("/finalize/:cartId", restrictTo("customer"), finalizeOrder); // 👈 مشتری خودش تایید می‌کند
+
+// مسیر کلیدی: مشتری خودش تایید نهایی را می‌زند
+cartRouter.post("/finalize/:cartId", restrictTo("customer"), finalizeOrder);
 
 export default cartRouter;
