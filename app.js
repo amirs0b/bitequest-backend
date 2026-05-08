@@ -29,7 +29,7 @@ app.use("/api/v1/tenants", tenantRouter);
 
 
 
-app.use((res, req, next) => {
+app.use(( req,res, next) => {
     return next(new HandleERROR("Not found", 404))
 })
 app.use(catchError)
