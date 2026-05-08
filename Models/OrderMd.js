@@ -27,9 +27,18 @@ const orderSchema = new mongoose.Schema({
         ref: "Voucher",
         default: null
     },
-    totalAmount: { type: Number, required: true },    // جمع کل قبل از تخفیف
-    discountAmount: { type: Number, default: 0 },   // مقدار سود مشتری از گیمیفیکیشن
-    finalAmount: { type: Number, required: true }    // مبلغی که باید به رستوران پرداخت شود
+    totalAmount: {
+        type: Number,
+        required: true
+    },    // جمع کل قبل از تخفیف
+    discountAmount: {
+        type: Number,
+        default: 0
+    },   // مقدار سود مشتری از گیمیفیکیشن
+    finalAmount: {
+        type: Number,
+        required: true
+    }    // مبلغ نهایی که باید به رستوران پرداخت شود
 }, { timestamps: true });
 
 const Order = mongoose.model("Order", orderSchema);
