@@ -19,6 +19,10 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    isArchived: {
+        type: Boolean,
+        default: false
+    },
     tenantId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Tenant",
