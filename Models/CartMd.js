@@ -9,22 +9,13 @@ const cartSchema = new mongoose.Schema({
     customerId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Customer",
-        default: null
+        required: [true, "Customer ID is required"]
     },
     items: [{
-        menuItem: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "MenuItem",
-            required: true
-        },
-        quantity: {
-            type: Number,
-            default: 1
-        },
-        priceAtTimeOfOrder: { // ثبت قیمت در لحظه خرید، تا اگر منو تغییر کرد، تاریخچه به هم نریزد
-            type: Number,
-            required: true
-        }
+        menuItemId: { type: mongoose.Schema.Types.ObjectId, ref: "MenuItem" },
+        name: String, // ذخیره نام برای تحلیل سریع‌تر بدون Join
+        price: Number,
+        quantity: { type: Number, default: 1 }
     }],
     voucherId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -33,8 +24,12 @@ const cartSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ["active", "completed", "abandoned"], // وضعیت completed به معنای ثبت در تاریخچه سفارشات مشتری است
+        enum: ["active", "finalized", "abandoned"],
         default: "active"
+    },
+    isArchived: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true });
 

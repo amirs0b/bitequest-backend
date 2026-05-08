@@ -1,37 +1,5 @@
 import mongoose from "mongoose";
 
-const rewardSchema = new mongoose.Schema({
-    type: {
-        type: String,
-        enum: ["percentage", "fixed_amount", "free_item", "bogo"],
-        required: [true, "Reward type is required"]
-    },
-    value: {
-        type: Number,
-        default: 0
-    },
-    targetItem: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "MenuItem",
-        default: null
-    },
-    maxDiscountCap: {
-        type: Number,
-        default: null
-    }
-}, { _id: false });
-
-const tierSchema = new mongoose.Schema({
-    requiredCorrectAnswers: {
-        type: Number,
-        required: [true, "Required correct answers count is required"]
-    },
-    reward: {
-        type: rewardSchema,
-        required: true
-    }
-}, { _id: false });
-
 const campaignSchema = new mongoose.Schema({
     tenantId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -43,35 +11,36 @@ const campaignSchema = new mongoose.Schema({
         required: [true, "Campaign title is required"]
     },
     description: {
-        type: String,
-        default: ""
-    },
-    tiers: [tierSchema],
-    conditions: {
-        minCartValue: { type: Number, default: 0 },
-        validDays: [{
-            type: String,
-            enum: ["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday", "friday"]
-        }],
-        validHours: {
-            start: { type: String, default: "00:00" },
-            end: { type: String, default: "23:59" }
-        },
-        maxUsagePerCustomer: { type: Number, default: 1 },
-        totalIssuanceLimit: { type: Number, default: null }
+        type: String
     },
     startDate: {
         type: Date,
-        default: Date.now
+        required: true
     },
     endDate: {
         type: Date,
-        default: null
+        required: true
     },
     isActive: {
         type: Boolean,
         default: true
-    }
+    },
+    isArchived: {
+        type: Boolean,
+        default: false
+    },
+    questions: [{
+        questionText: { type: String, required: true },
+        options: [{ type: String, required: true }],
+        correctOptionIndex: { type: Number, required: true }
+    }],
+    tiers: [{
+        requiredCorrectAnswers: { type: Number, required: true },
+        discountPercentage: { type: Number, required: true },
+        maxDiscountAmount: { type: Number, default: 0 },
+        validityDays: { type: Number, default: 7 },
+        posCode: { type: String, default: null } // 👈 فیلد جدید: کد تعریف شده در سیستم حسابداری رستوران
+    }]
 }, { timestamps: true });
 
 const Campaign = mongoose.model("Campaign", campaignSchema);

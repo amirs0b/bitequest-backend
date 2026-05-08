@@ -8,6 +8,8 @@ import authRouter from "./Routes/Auth.js";
 import tenantRouter from "./Routes/Tenant.js";
 import userRouter from "./Routes/User.js";
 import menuRouter from "./Routes/Menu.js";
+import campaignRouter from "./Routes/Campaign.js";
+import cartRouter from "./Routes/Cart.js";
 
 
 
@@ -26,6 +28,10 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/tenants", tenantRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/menu", menuRouter);
+app.use("/api/v1/campaigns", campaignRouter);
+app.use("/api/v1/carts", cartRouter);
+
+
 
 
 
