@@ -1,11 +1,16 @@
-import Order from "../Models/OrderMd.js"; //
+import Order from "../Models/OrderMd.js";
 import mongoose from "mongoose";
-import { catchAsync } from "vanta-api";
+import { catchAsync, HandleERROR } from "vanta-api"; // 👈 HandleERROR اضافه شد
 
 // ------------------------------------------------------------------
 // 1. دریافت شاخص‌های کلیدی عملکرد (KPIs)
 // ------------------------------------------------------------------
 export const getDashboardKPIs = catchAsync(async (req, res, next) => {
+    // 👈 جلوگیری از Crash کردن سرور در صورت نبود tenantId
+    if (!req.query.tenantId) {
+        return next(new HandleERROR("Tenant ID is required for analytics processing.", 400));
+    }
+
     const { start, end } = req.query;
     const tenantId = new mongoose.Types.ObjectId(req.query.tenantId);
 
@@ -40,6 +45,11 @@ export const getDashboardKPIs = catchAsync(async (req, res, next) => {
 // 2. تحلیل سودآوری گیمیفیکیشن (Campaign ROI)
 // ------------------------------------------------------------------
 export const getCampaignROI = catchAsync(async (req, res, next) => {
+    // 👈 لایه امنیتی
+    if (!req.query.tenantId) {
+        return next(new HandleERROR("Tenant ID is required for analytics processing.", 400));
+    }
+
     const tenantId = new mongoose.Types.ObjectId(req.query.tenantId);
 
     const roiStats = await Order.aggregate([
@@ -65,6 +75,11 @@ export const getCampaignROI = catchAsync(async (req, res, next) => {
 // 3. پرفروش‌ترین آیتم‌های منو
 // ------------------------------------------------------------------
 export const getTopSellingItems = catchAsync(async (req, res, next) => {
+    // 👈 لایه امنیتی
+    if (!req.query.tenantId) {
+        return next(new HandleERROR("Tenant ID is required for analytics processing.", 400));
+    }
+
     const tenantId = new mongoose.Types.ObjectId(req.query.tenantId);
 
     const topItems = await Order.aggregate([
@@ -92,6 +107,11 @@ export const getTopSellingItems = catchAsync(async (req, res, next) => {
 // 4. دیتای نمودار فروش (Daily Sales Chart)
 // ------------------------------------------------------------------
 export const getSalesChartData = catchAsync(async (req, res, next) => {
+    // 👈 لایه امنیتی
+    if (!req.query.tenantId) {
+        return next(new HandleERROR("Tenant ID is required for analytics processing.", 400));
+    }
+
     const tenantId = new mongoose.Types.ObjectId(req.query.tenantId);
 
     const chartData = await Order.aggregate([

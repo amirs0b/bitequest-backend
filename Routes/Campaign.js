@@ -10,30 +10,30 @@ import {
 } from "../Controllers/CampaignCn.js";
 import { protect, restrictTo } from "../Middlewares/AuthMw.js";
 import { applyTenantScope } from "../Middlewares/TenantScopeMw.js";
+import { requirePermission, PERMISSIONS } from "../Middlewares/PermissionMw.js"; // 👈 اضافه شد
 
 const campaignRouter = express.Router();
 
-// تمام این روت‌ها نیاز به لاگین دارند (چه مدیر، چه مشتری)
 campaignRouter.use(protect);
 
-// -----------------------------------------------------------
-// 1. مسیرهای مخصوص مشتریان (بازی کردن و کیف پول)
-// -----------------------------------------------------------
+// مسیرهای مخصوص مشتریان
 campaignRouter.get("/my-vouchers", getMyVouchers);
 campaignRouter.post("/:campaignId/play", playCampaign);
 
-// مشتریان می‌توانند لیست کمپین‌ها را ببینند (فیلتر امنیتی درون کنترلر اعمال می‌شود)
+// مشاهده لیست کمپین‌ها
 campaignRouter.get("/", getAllCampaigns);
 campaignRouter.get("/:id", getCampaignById);
 
 // -----------------------------------------------------------
-// 2. مسیرهای مدیریت کمپین (مخصوص ادمین‌ها و مدیران رستوران)
+// مسیرهای مدیریت کمپین (اعمال PBAC)
 // -----------------------------------------------------------
-campaignRouter.use(restrictTo("superAdmin", "owner", "manager"));
-campaignRouter.use(applyTenantScope); // اعمال خودکار tenantId
+campaignRouter.use(applyTenantScope);
 
-campaignRouter.post("/", createCampaign);
-campaignRouter.patch("/:id", updateCampaign);
+// فقط کارمندانی که مجوز ساخت/ویرایش کمپین را دارند
+campaignRouter.post("/", requirePermission(PERMISSIONS.CAMP_CREATE), createCampaign);
+campaignRouter.patch("/:id", requirePermission(PERMISSIONS.CAMP_CREATE), updateCampaign);
+
+// بایگانی کردن معمولاً دسترسی بالاتری می‌خواهد، لذا علاوه بر PBAC، سطح نقش را هم چک می‌کنیم (ترکیبی)
 campaignRouter.delete("/:id", restrictTo("superAdmin", "owner"), archiveCampaign);
 
 export default campaignRouter;

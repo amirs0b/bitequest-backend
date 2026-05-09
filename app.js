@@ -15,6 +15,8 @@ import cartRouter from "./Routes/Cart.js";
 import analyticsRouter from "./Routes/Analytics.js";
 import customerAuthRouter from "./Routes/CustomerAuth.js";
 import qrRouter from "./Routes/QrCode.js";
+import superAdminRouter from "./Routes/SuperAdmin.js";
+import ticketRouter from "./Routes/Ticket.js";
 
 const __filename = fileURLToPath(import.meta.url);
 export const __dirname = path.dirname(__filename);
@@ -40,6 +42,8 @@ app.use("/api/v1/carts", cartRouter);
 app.use("/api/v1/analytics", analyticsRouter);
 app.use("/api/v1/customers/auth", customerAuthRouter);
 app.use("/api/v1/qrcode", qrRouter);
+app.use("/api/v1/tickets", ticketRouter);
+app.use("/api/v1/superadmin", superAdminRouter);
 
 
 // 5. مدیریت مسیرهای پیدا نشده (404)
