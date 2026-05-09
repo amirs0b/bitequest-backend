@@ -5,11 +5,16 @@ import ApiFeatures, { catchAsync, HandleERROR } from "vanta-api";
 // 1. افزودن غذای جدید به منو (دسترسی: superAdmin, owner, manager)
 // ------------------------------------------------------------------
 export const createMenuItem = catchAsync(async (req, res, next) => {
-    const { name, price, category, image } = req.body;
+    const { name, price, category } = req.body;
     // نکته: req.body.tenantId توسط میدل‌ور applyTenantScope به صورت خودکار اضافه شده است
 
     if (!name || !price || !category) {
         return next(new HandleERROR("Name, price, and category are required", 400));
+    }
+
+    // 👈 مدیریت آپلود عکس در زمان ایجاد غذای جدید
+    if (req.file) {
+        req.body.image = `/uploads/${req.file.filename}`;
     }
 
     const newMenuItem = await MenuItem.create({
@@ -17,7 +22,7 @@ export const createMenuItem = catchAsync(async (req, res, next) => {
         name,
         price,
         category,
-        image
+        image: req.body.image // آدرسی که از ریکوئست یا آپلودر آمده است ثبت می‌شود
     });
 
     return res.status(201).json({
@@ -93,6 +98,11 @@ export const getMenuItemById = catchAsync(async (req, res, next) => {
 // ------------------------------------------------------------------
 export const updateMenuItem = catchAsync(async (req, res, next) => {
     const { id } = req.params;
+
+    // 👈 مدیریت آپدیت عکس (اگر فایل جدیدی ارسال شده باشد، جایگزین می‌شود)
+    if (req.file) {
+        req.body.image = `/uploads/${req.file.filename}`;
+    }
 
     // کوئری امن: هم آیدی غذا چک می‌شود، هم آرشیو نبودن، و هم دسترسی صاحب رستوران
     const query = { _id: id, isArchived: false };

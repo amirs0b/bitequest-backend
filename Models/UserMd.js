@@ -15,6 +15,10 @@ const userSchema = new mongoose.Schema({
         enum: ["superAdmin", "staff", "analyst", "owner", "manager", "cashier"],
         default: "staff"
     },
+    // 👈 اضافه شدن فیلد دسترسی‌های خرد (PBAC)
+    permissions: [{
+        type: String
+    }],
     forcePasswordChange: {
         type: Boolean,
         default: true

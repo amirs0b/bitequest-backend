@@ -6,31 +6,32 @@ import {
     updateMenuItem,
     archiveMenuItem
 } from "../Controllers/MenuCn.js";
-import { protect, restrictTo } from "../Middlewares/AuthMw.js";
+import { protect } from "../Middlewares/AuthMw.js";
 import { applyTenantScope } from "../Middlewares/TenantScopeMw.js";
+import { uploadSingleImage } from "../Middlewares/UploadMw.js";
+import { requirePermission, PERMISSIONS } from "../Middlewares/PermissionMw.js";
 
 const menuRouter = express.Router();
 
 // -----------------------------------------------------------
-// 1. مسیرهای عمومی (برای مشاهده منو توسط مشتریان)
+// روت‌های عمومی (مشتریان و بازدیدکنندگان)
 // -----------------------------------------------------------
-menuRouter.route("/").get(getAllMenuItems);
-menuRouter.route("/:id").get(getMenuItemById);
+menuRouter.get("/", getAllMenuItems);
+menuRouter.get("/:id", getMenuItemById);
 
 // -----------------------------------------------------------
-// 2. مسیرهای محافظت‌شده مدیریتی (نیاز به توکن و اعمال دیوار نامرئی دارند)
+// روت‌های مدیریتی (قفل‌گذاری شده با PBAC)
 // -----------------------------------------------------------
 menuRouter.use(protect);
-menuRouter.use(applyTenantScope); // اعمال خودکار tenantId در بدنه درخواست‌های پرسنل
+menuRouter.use(applyTenantScope);
 
-menuRouter.route("/")
-    // افزودن غذا: فقط ادمین کل، صاحب رستوران و مدیر داخلی اجازه دارند
-    .post(restrictTo("superAdmin", "owner", "manager"), createMenuItem);
+// دسترسی ساخت غذای جدید (MNU-102)
+menuRouter.post("/", requirePermission(PERMISSIONS.MENU_CREATE), uploadSingleImage, createMenuItem);
 
-menuRouter.route("/:id")
-    // ویرایش قیمت، عکس یا ناموجود کردن موقت: ادمین کل، صاحب و مدیر داخلی
-    .patch(restrictTo("superAdmin", "owner", "manager"), updateMenuItem)
-    // حذف غذا از منو (بایگانی): فقط صاحب رستوران و ادمین کل اجازه دارند
-    .delete(restrictTo("superAdmin", "owner"), archiveMenuItem);
+// دسترسی ویرایش غذا (MNU-103)
+menuRouter.patch("/:id", requirePermission(PERMISSIONS.MENU_EDIT), uploadSingleImage, updateMenuItem);
+
+// دسترسی آرشیو کردن غذا (MNU-104)
+menuRouter.delete("/:id", requirePermission(PERMISSIONS.MENU_ARCHIVE), archiveMenuItem);
 
 export default menuRouter;

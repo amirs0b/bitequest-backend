@@ -2,21 +2,29 @@ import User from "../Models/UserMd.js";
 import ApiFeatures, { catchAsync, HandleERROR } from "vanta-api";
 import bcryptjs from "bcryptjs";
 
+// ------------------------------------------------------------------
+// 1. ساخت پرسنل جدید (با پشتیبانی از هش پسورد، نقش‌ها و مجوزهای PBAC)
+// ------------------------------------------------------------------
 export const createUser = catchAsync(async (req, res, next) => {
-    const { username, password, role } = req.body;
+    // 👈 دریافت permissions از بدنه درخواست
+    const { username, password, role, permissions } = req.body;
+
     if (!username || !password || !role) {
         return next(new HandleERROR("Username, password, and role are required", 400));
     }
 
+    // امنیت نقش‌ها: جلوگیری از ساخت کاربران ارشد سیستم توسط مدیر رستوران
     if (req.user.role !== "superAdmin" && ["superAdmin", "analyst", "staff"].includes(role)) {
         return next(new HandleERROR("You do not have permission to create a user with this role.", 403));
     }
 
     const hashPassword = bcryptjs.hashSync(password, 10);
+
     const newUser = await User.create({
         username,
         password: hashPassword,
         role,
+        permissions: permissions || [], // 👈 تزریق آرایه کدهای دسترسی خرد
         tenantId: req.body.tenantId || null,
         forcePasswordChange: true
     });
@@ -25,6 +33,9 @@ export const createUser = catchAsync(async (req, res, next) => {
     return res.status(201).json({ success: true, data: { user: newUser } });
 });
 
+// ------------------------------------------------------------------
+// 2. دریافت لیست پرسنل (بدون نمایش پسوردها)
+// ------------------------------------------------------------------
 export const getAllUsers = catchAsync(async (req, res, next) => {
     const features = new ApiFeatures(User, req.query, req.user.role)
         .filter()
@@ -36,6 +47,8 @@ export const getAllUsers = catchAsync(async (req, res, next) => {
     features.addManualFilters({ isArchived: false });
 
     const result = await features.execute();
+
+    // پاک کردن پسوردها از خروجی
     result.data.forEach(user => user.password = undefined);
 
     return res.status(200).json({
@@ -45,6 +58,9 @@ export const getAllUsers = catchAsync(async (req, res, next) => {
     });
 });
 
+// ------------------------------------------------------------------
+// 3. ویرایش اطلاعات پرسنل (از جمله تغییر کدهای دسترسی)
+// ------------------------------------------------------------------
 export const updateUser = catchAsync(async (req, res, next) => {
     const { id } = req.params;
     const query = { _id: id, isArchived: false };
@@ -57,8 +73,14 @@ export const updateUser = catchAsync(async (req, res, next) => {
         return next(new HandleERROR("You cannot assign this role.", 403));
     }
 
+    // به‌روزرسانی فیلدهای مجاز
     if (req.body.role) userToUpdate.role = req.body.role;
     if (req.body.username) userToUpdate.username = req.body.username;
+
+    // 👈 اضافه شدن قابلیت ویرایش کدهای دسترسی پرسنل
+    if (req.body.permissions && Array.isArray(req.body.permissions)) {
+        userToUpdate.permissions = req.body.permissions;
+    }
 
     await userToUpdate.save();
     userToUpdate.password = undefined;
@@ -66,7 +88,9 @@ export const updateUser = catchAsync(async (req, res, next) => {
     return res.status(200).json({ success: true, data: { user: userToUpdate } });
 });
 
-// بایگانی کردن کاربر به جای حذف
+// ------------------------------------------------------------------
+// 4. بایگانی کردن کاربر به جای حذف
+// ------------------------------------------------------------------
 export const archiveUser = catchAsync(async (req, res, next) => {
     const { id } = req.params;
     const query = { _id: id, isArchived: false };
@@ -83,6 +107,9 @@ export const archiveUser = catchAsync(async (req, res, next) => {
     });
 });
 
+// ------------------------------------------------------------------
+// 5. تغییر رمز عبور شخصی (با بررسی امنیتی و Regex)
+// ------------------------------------------------------------------
 export const changeMyPassword = catchAsync(async (req, res, next) => {
     const { currentPassword, newPassword } = req.body;
     const user = await User.findById(req.user.id);

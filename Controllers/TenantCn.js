@@ -11,13 +11,13 @@ export const createTenant = catchAsync(async (req, res, next) => {
         return next(new HandleERROR("Tenant name and slug are required", 400));
     }
 
-    const newTenant = await Tenant.create({
-        name,
-        slug,
-        address,
-        location,
-        subscription
-    });
+    // اگر سوپرادمین در زمان ساخت، لوگو هم آپلود کرده باشد
+    const newTenantData = { name, slug, address, location, subscription };
+    if (req.file) {
+        newTenantData.logo = `/uploads/${req.file.filename}`;
+    }
+
+    const newTenant = await Tenant.create(newTenantData);
 
     return res.status(201).json({
         success: true,
@@ -138,8 +138,16 @@ export const updateTenant = catchAsync(async (req, res, next) => {
     delete updates.smsWalletBalance;
     delete updates.isArchived;
 
+    // 👈 مدیریت آپلود لوگو در صورت وجود فایل
+    if (req.file) {
+        updates.logo = `/uploads/${req.file.filename}`;
+    }
+
+    // 🔒 امنیت: سوپر ادمین می‌تواند هر آیدی را ویرایش کند، اما مالک فقط رستوران خودش را
+    const targetId = req.user.role === "superAdmin" ? id : req.user.tenantId;
+
     const tenant = await Tenant.findOneAndUpdate(
-        { _id: id, isArchived: false },
+        { _id: targetId, isArchived: false },
         updates,
         { new: true, runValidators: true }
     );
