@@ -109,7 +109,7 @@ export const verifyOtp = catchAsync(async (req, res, next) => {
 // 3. سرویس ارسال پیامک اطلاع‌رسانی (کد تخفیف، خوش‌آمدگویی و ...)
 // ------------------------------------------------------------------
 export const sendNotification = catchAsync(async (req, res, next) => {
-    const { customerId, tenantId, messageContent } = req.body;
+    const {customerId, tenantId, messageContent} = req.body;
 
     if (!customerId || !tenantId || !messageContent) {
         return next(new HandleERROR("Customer ID, Tenant ID, and Message Content are required", 400));
@@ -136,4 +136,8 @@ export const sendNotification = catchAsync(async (req, res, next) => {
 
     return res.status(200).json({
         success: true,
-        message: "Notification
+        message: "Notification"
+    })
+})
+
+
