@@ -6,14 +6,12 @@ import bcryptjs from "bcryptjs";
 // 1. ساخت پرسنل جدید (با پشتیبانی از هش پسورد، نقش‌ها و مجوزهای PBAC)
 // ------------------------------------------------------------------
 export const createUser = catchAsync(async (req, res, next) => {
-    // 👈 دریافت permissions از بدنه درخواست
     const { username, password, role, permissions } = req.body;
 
     if (!username || !password || !role) {
         return next(new HandleERROR("Username, password, and role are required", 400));
     }
 
-    // امنیت نقش‌ها: جلوگیری از ساخت کاربران ارشد سیستم توسط مدیر رستوران
     if (req.user.role !== "superAdmin" && ["superAdmin", "analyst", "staff"].includes(role)) {
         return next(new HandleERROR("You do not have permission to create a user with this role.", 403));
     }
@@ -24,7 +22,7 @@ export const createUser = catchAsync(async (req, res, next) => {
         username,
         password: hashPassword,
         role,
-        permissions: permissions || [], // 👈 تزریق آرایه کدهای دسترسی خرد
+        permissions: permissions || [],
         tenantId: req.body.tenantId || null,
         forcePasswordChange: true
     });
@@ -43,12 +41,10 @@ export const getAllUsers = catchAsync(async (req, res, next) => {
         .limitFields()
         .paginate();
 
-    // فیلتر کردن کاربران آرشیو شده
     features.addManualFilters({ isArchived: false });
 
     const result = await features.execute();
 
-    // پاک کردن پسوردها از خروجی
     result.data.forEach(user => user.password = undefined);
 
     return res.status(200).json({
@@ -73,13 +69,16 @@ export const updateUser = catchAsync(async (req, res, next) => {
         return next(new HandleERROR("You cannot assign this role.", 403));
     }
 
-    // به‌روزرسانی فیلدهای مجاز
     if (req.body.role) userToUpdate.role = req.body.role;
     if (req.body.username) userToUpdate.username = req.body.username;
 
-    // 👈 اضافه شدن قابلیت ویرایش کدهای دسترسی پرسنل
+    // 👈 رفع باگ امنیتی: فقط مالک رستوران یا سوپرادمین حق تغییر کدهای دسترسی را دارد
     if (req.body.permissions && Array.isArray(req.body.permissions)) {
-        userToUpdate.permissions = req.body.permissions;
+        if (req.user.role === "superAdmin" || req.user.role === "owner") {
+            userToUpdate.permissions = req.body.permissions;
+        } else {
+            return next(new HandleERROR("Only the Owner can modify access permissions.", 403));
+        }
     }
 
     await userToUpdate.save();

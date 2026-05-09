@@ -18,6 +18,13 @@ const customerSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    // 👈 فیلدهای مربوط به احراز هویت پیامکی اضافه شدند
+    otp: {
+        type: String
+    },
+    otpExpiresAt: {
+        type: Date
+    },
     // ذخیره آخرین موقعیت مکانی مشتری برای پیشنهاد رستوران‌های اطراف
     location: {
         type: {

@@ -7,7 +7,13 @@ import { catchAsync, HandleERROR } from "vanta-api";
 export const generateTableQrCodes = catchAsync(async (req, res, next) => {
     // مدیر می‌تواند درخواست تولید بارکد برای چندین میز را همزمان بدهد: [1, 2, 3, 4, 5]
     const { tableNumbers } = req.body;
-    const tenantId = req.user.tenantId;
+
+    // 👈 رفع باگ: شناسایی tenantId حتی اگر سوپرادمین درخواست داده باشد
+    const tenantId = req.user.role === 'superAdmin' ? req.body.tenantId : req.user.tenantId;
+
+    if (!tenantId) {
+        return next(new HandleERROR("Tenant ID is required to generate QR codes.", 400));
+    }
 
     if (!tableNumbers || !Array.isArray(tableNumbers) || tableNumbers.length === 0) {
         return next(new HandleERROR("Please provide a valid array of table numbers.", 400));
