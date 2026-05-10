@@ -4,6 +4,8 @@ import { fileURLToPath } from "url";
 import path from "path";
 import morgan from "morgan";
 import { catchError, HandleERROR } from "vanta-api";
+import swaggerUi from "swagger-ui-express";
+import YAML from "yamljs";
 
 // 1. وارد کردن روت‌ها
 import authRouter from "./Routes/Auth.js";
@@ -20,6 +22,8 @@ import ticketRouter from "./Routes/Ticket.js";
 
 const __filename = fileURLToPath(import.meta.url);
 export const __dirname = path.dirname(__filename);
+
+const swaggerDocument = YAML.load(path.join(__dirname, "swagger.yaml"));
 
 const app = express();
 
@@ -44,6 +48,8 @@ app.use("/api/v1/customers/auth", customerAuthRouter);
 app.use("/api/v1/qrcode", qrRouter);
 app.use("/api/v1/tickets", ticketRouter);
 app.use("/api/v1/superadmin", superAdminRouter);
+app.use("/api/v1/audit-logs", auditLogRouter);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 
 // 5. مدیریت مسیرهای پیدا نشده (404)

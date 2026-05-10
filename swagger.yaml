@@ -1,0 +1,725 @@
+openapi: 3.0.0
+info:
+  title: BiteQuest Platform API
+  version: 1.0.0
+  description: |
+    **فارسی:** به مستندات جامع و دو زبانه API پلتفرم BiteQuest خوش آمدید.
+    این دفترچه راهنما به ساده‌ترین شکل ممکن طراحی شده است.
+    
+    **English:** Welcome to the comprehensive and bilingual API documentation for the BiteQuest platform.
+    This guide is designed as simply as possible.
+
+# ---------------------------------------------------------
+# سیستم قفل‌گذاری (Security)
+# ---------------------------------------------------------
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        توکن (Token) خود را اینجا وارد کنید. (بدون کلمه Bearer)
+
+# ---------------------------------------------------------
+# دسته‌بندی ماژول‌ها (Tags)
+# ---------------------------------------------------------
+tags:
+  - name: 1. Authentication
+    description: احراز هویت پرسنل و مشتریان (ورود و دریافت توکن)
+  - name: 2. User Management
+    description: مدیریت منابع انسانی و پرسنل (ویژه مدیران)
+
+# ---------------------------------------------------------
+# مسیرها (Paths)
+# ---------------------------------------------------------
+paths:
+  # ==========================================
+  # ماژول ۱: احراز هویت (Authentication)
+  # ==========================================
+  /api/v1/auth/staff-login:
+    post:
+      tags: [1. Authentication]
+      summary: ورود پرسنل | Staff Login
+      description: |
+        **فارسی:** ورود پرسنل (مدیر، گارسون، صندوق‌دار) با نام کاربری و رمز عبور.
+        **English:** Staff login using username and password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: { type: string, example: "admin_1" }
+                password: { type: string, example: "Secret@123" }
+      responses:
+        '200': { description: "ورود موفق | Login Successful" }
+        '401': { description: "رمز اشتباه است | Incorrect Password" }
+
+  /api/v1/auth/me:
+    get:
+      tags: [1. Authentication]
+      summary: اطلاعات پروفایل من | Get My Profile
+      description: |
+        **فارسی:** دریافت اطلاعات کاربری که الان لاگین کرده است (با ارسال توکن).
+        **English:** Get the profile of the currently logged-in user.
+      security:
+        - BearerAuth: []
+      responses:
+        '200': { description: "اطلاعات دریافت شد | Profile retrieved" }
+
+  /api/v1/customer-auth/send-otp:
+    post:
+      tags: [1. Authentication]
+      summary: درخواست کد تایید مشتری | Request OTP
+      description: |
+        **فارسی:** ارسال پیامک ورود ۵ رقمی به موبایل مشتری.
+        **English:** Send a 5-digit OTP SMS to the customer's phone.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone: { type: string, example: "09123456789" }
+                tenantId: { type: string, example: "60d5ecb8b392d700153ef123" }
+      responses:
+        '200': { description: "پیامک ارسال شد | SMS sent" }
+
+  /api/v1/customer-auth/verify-otp:
+    post:
+      tags: [1. Authentication]
+      summary: تایید کد و ورود مشتری | Verify OTP
+      description: |
+        **فارسی:** ارسال کد پیامک شده برای ورود به سیستم و دریافت توکن.
+        **English:** Send the received OTP to log in and get a token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone: { type: string, example: "09123456789" }
+                otp: { type: string, example: "12345" }
+      responses:
+        '200': { description: "ورود موفق | Login successful" }
+
+  # ==========================================
+  # ماژول ۲: مدیریت پرسنل (User Management)
+  # ==========================================
+  /api/v1/users:
+    get:
+      tags: [2. User Management]
+      summary: لیست پرسنل رستوران | Get All Users
+      description: |
+        **فارسی:** دریافت لیست تمامی کارمندان یک رستوران. (نیاز به دسترسی USR-401)
+      security:
+        - BearerAuth: []
+      responses:
+        '200': { description: "لیست دریافت شد | List retrieved" }
+
+    post:
+      tags: [2. User Management]
+      summary: ثبت کارمند جدید | Create User
+      description: |
+        **فارسی:** استخدام پرسنل جدید و تعیین نقش و کدهای دسترسی (Permissions) برای او.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: { type: string, example: "waiter_ali" }
+                password: { type: string, example: "Pass@123" }
+                role: { type: string, example: "staff" }
+                permissions:
+                  type: array
+                  items: { type: string }
+                  example: ["MNU-101", "ORD-302"]
+      responses:
+        '201': { description: "کارمند ثبت شد | User created" }
+
+  /api/v1/users/{id}:
+    patch:
+      tags: [2. User Management]
+      summary: ویرایش کارمند | Update User
+      description: |
+        **فارسی:** ویرایش اطلاعات یا تغییر سطح دسترسی‌های یک کارمند.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+          description: آیدی کارمند
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role: { type: string, example: "manager" }
+                permissions:
+                  type: array
+                  items: { type: string }
+                  example: ["FIN-301", "USR-401"]
+      responses:
+        '200': { description: "آپدیت شد | Updated" }
+
+    delete:
+      tags: [2. User Management]
+      summary: اخراج/بایگانی کارمند | Archive User
+      description: |
+        **فارسی:** غیرفعال کردن یک کارمند به جای حذف فیزیکی او.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: "بایگانی شد | Archived" }
+
+  /api/v1/users/change-my-password:
+    patch:
+      tags: [2. User Management]
+      summary: تغییر رمز عبور شخصی | Change My Password
+      description: |
+        **فارسی:** هر کارمندی می‌تواند با ارسال رمز فعلی و رمز جدید، پسورد خود را عوض کند.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                currentPassword: { type: string, example: "Old@Pass1" }
+                newPassword: { type: string, example: "New@StrongPass2" }
+      responses:
+        '200': { description: "رمز تغییر کرد | Password changed" }
+  # ==========================================
+  # ماژول ۳: مدیریت رستوران‌ها (Tenant Management)
+  # ==========================================
+  /api/v1/tenants:
+    get:
+      tags: [3. Tenant Management]
+      summary: لیست همه رستوران‌ها | Get All Tenants
+      description: |
+        **فارسی:** دریافت لیست تمامی رستوران‌های ثبت شده در پلتفرم (پشتیبانی از فیلتر و صفحه‌بندی).
+        **English:** Get a list of all registered restaurants (supports filtering and pagination).
+      responses:
+        '200': { description: "لیست دریافت شد | List retrieved successfully" }
+
+    post:
+      tags: [3. Tenant Management]
+      summary: ثبت رستوران جدید (فقط سوپرادمین) | Create Tenant
+      description: |
+        **فارسی:** ساخت یک رستوران جدید در سیستم. امکان آپلود لوگو وجود دارد. (نیاز به توکن سوپرادمین)
+        **English:** Create a new restaurant. Supports logo upload.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name: { type: string, example: "رستوران نمونه" }
+                slug: { type: string, example: "sample-restaurant" }
+                ownerName: { type: string, example: "علی احمدی" }
+                ownerPhone: { type: string, example: "09123456789" }
+                logo: { type: string, format: binary, description: "تصویر لوگو رستوران" }
+      responses:
+        '201': { description: "رستوران با موفقیت ساخته شد | Tenant created successfully" }
+
+  /api/v1/tenants/search/nearby:
+    get:
+      tags: [3. Tenant Management]
+      summary: جستجوی رستوران‌های اطراف | Search Nearby Tenants
+      description: |
+        **فارسی:** پیدا کردن رستوران‌های نزدیک به لوکیشن مشتری بر اساس طول و عرض جغرافیایی.
+        **English:** Find restaurants near the customer's location based on longitude and latitude.
+      parameters:
+        - in: query
+          name: lng
+          required: true
+          schema: { type: number }
+          description: طول جغرافیایی (Longitude)
+        - in: query
+          name: lat
+          required: true
+          schema: { type: number }
+          description: عرض جغرافیایی (Latitude)
+        - in: query
+          name: radius
+          schema: { type: number, default: 5 }
+          description: شعاع جستجو به کیلومتر (Radius in km)
+      responses:
+        '200': { description: "رستوران‌های اطراف پیدا شدند | Nearby tenants found" }
+
+  /api/v1/tenants/{identifier}:
+    get:
+      tags: [3. Tenant Management]
+      summary: دریافت اطلاعات یک رستوران | Get Single Tenant
+      description: |
+        **فارسی:** دریافت اطلاعات کامل یک رستوران با استفاده از آیدی (ID) یا نامک (slug).
+        **English:** Get full details of a tenant using ID or slug.
+      parameters:
+        - in: path
+          name: identifier
+          required: true
+          schema: { type: string }
+          description: آیدی یا نامک رستوران (ID or Slug)
+      responses:
+        '200': { description: "اطلاعات دریافت شد | Tenant details retrieved" }
+        '404': { description: "رستوران پیدا نشد | Tenant not found" }
+
+    patch:
+      tags: [3. Tenant Management]
+      summary: ویرایش پروفایل رستوران | Update Tenant
+      description: |
+        **فارسی:** ویرایش اطلاعات رستوران یا تغییر لوگو (نیاز به دسترسی TNT-601).
+        **English:** Edit tenant details or update logo.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: identifier
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                address: { type: string }
+                logo: { type: string, format: binary }
+      responses:
+        '200': { description: "ویرایش با موفقیت انجام شد | Updated successfully" }
+
+  # ==========================================
+  # ماژول ۴: مدیریت منو (Menu & Products)
+  # ==========================================
+  /api/v1/menu:
+    get:
+      tags: [4. Menu & Products]
+      summary: دریافت منوی رستوران | Get Menu
+      description: |
+        **فارسی:** دریافت لیست غذاهای یک رستوران خاص (برای نمایش به مشتری در منوی دیجیتال).
+        **English:** Get the list of menu items for a specific restaurant.
+      parameters:
+        - in: query
+          name: tenantId
+          required: true
+          schema: { type: string }
+          description: آیدی رستوران (Tenant ID)
+      responses:
+        '200': { description: "منو دریافت شد | Menu retrieved" }
+
+    post:
+      tags: [4. Menu & Products]
+      summary: افزودن غذای جدید | Add Menu Item
+      description: |
+        **فارسی:** اضافه کردن یک غذای جدید به منو همراه با آپلود عکس (نیاز به دسترسی MNU-102).
+        **English:** Add a new menu item along with an image upload.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name: { type: string, example: "پیتزا پپرونی" }
+                price: { type: number, example: 250000 }
+                category: { type: string, example: "پیتزا" }
+                description: { type: string, example: "پیتزا پپرونی با پنیر اضافه" }
+                image: { type: string, format: binary, description: "عکس غذا" }
+      responses:
+        '201': { description: "غذا با موفقیت اضافه شد | Item added successfully" }
+
+  /api/v1/menu/{id}:
+    get:
+      tags: [4. Menu & Products]
+      summary: جزئیات یک غذا | Get Single Item
+      description: |
+        **فارسی:** دریافت اطلاعات دقیق یک غذا با استفاده از آیدی آن.
+        **English:** Get detailed information of a specific menu item.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: "اطلاعات غذا دریافت شد | Item retrieved" }
+
+    patch:
+      tags: [4. Menu & Products]
+      summary: ویرایش غذا | Update Menu Item
+      description: |
+        **فارسی:** ویرایش قیمت، نام، دسته‌بندی یا تغییر عکس غذا (نیاز به دسترسی MNU-103).
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                price: { type: number }
+                isAvailable: { type: boolean, example: true }
+                image: { type: string, format: binary }
+      responses:
+        '200': { description: "غذا ویرایش شد | Item updated" }
+
+    delete:
+      tags: [4. Menu & Products]
+      summary: بایگانی/حذف غذا | Archive Menu Item
+      description: |
+        **فارسی:** خارج کردن یک غذا از منو (حذف نرم) (نیاز به دسترسی MNU-104).
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: "غذا بایگانی شد | Item archived" }
+  # ==========================================
+  # ماژول ۵: سبد خرید و سفارشات (Cart & Orders)
+  # ==========================================
+  /api/v1/cart:
+    get:
+      tags: [5. Cart & Orders]
+      summary: مشاهده سبد خرید فعلی | Get Current Cart
+      description: |
+        **فارسی:** دریافت محتویات سبد خرید کاربری که لاگین کرده است (همراه با محاسبه مجموع قیمت و تخفیف‌ها).
+        **English:** Get the contents of the logged-in user's cart (including total price and discounts).
+      security:
+        - BearerAuth: []
+      responses:
+        '200': { description: "سبد خرید دریافت شد | Cart retrieved" }
+
+    post:
+      tags: [5. Cart & Orders]
+      summary: افزودن غذا به سبد خرید | Add to Cart
+      description: |
+        **فارسی:** اضافه کردن یک آیتم جدید به سبد خرید یا افزایش تعداد آن.
+        **English:** Add a new item to the cart or increase its quantity.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                menuItemId: { type: string, example: "60d5ecb8b392d700153ef999" }
+                quantity: { type: number, example: 2 }
+      responses:
+        '200': { description: "به سبد خرید اضافه شد | Added to cart" }
+
+  /api/v1/cart/finalize:
+    post:
+      tags: [5. Cart & Orders]
+      summary: نهایی کردن سفارش | Finalize Order
+      description: |
+        **فارسی:** تبدیل سبد خرید فعلی به یک سفارش قطعی (فاکتور). این مرحله می‌تواند به درگاه پرداخت متصل شود.
+        **English:** Convert the current cart into a finalized order (Invoice).
+      security:
+        - BearerAuth: []
+      responses:
+        '200': { description: "سفارش با موفقیت ثبت شد | Order placed successfully" }
+        '400': { description: "سبد خرید خالی است | Cart is empty" }
+
+  # ==========================================
+  # ماژول ۶: گیمیفیکیشن و آزمون‌ها (Gamification & Quiz)
+  # ==========================================
+  /api/v1/campaigns/my-vouchers:
+    get:
+      tags: [6. Gamification & Campaigns]
+      summary: کیف پول و کدهای تخفیف من | My Vouchers
+      description: |
+        **فارسی:** دریافت لیست کدهای تخفیفی که مشتری در مسابقات برنده شده است.
+      security:
+        - BearerAuth: []
+      responses:
+        '200': { description: "لیست دریافت شد | Vouchers retrieved" }
+
+  /api/v1/campaigns/{campaignId}/play:
+    post:
+      tags: [6. Gamification & Campaigns]
+      summary: ارسال پاسخ مسابقه | Submit Quiz Answers
+      description: |
+        **فارسی:** ارسال آرایه‌ای از گزینه‌های انتخاب شده توسط کاربر برای سوالات مسابقه.
+        **English:** Submit an array of selected option indices for the quiz questions.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: campaignId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                answers:
+                  type: array
+                  items: { type: number }
+                  example: [0, 2, 1]
+                  description: "ایندکس جواب‌های انتخاب شده به ترتیب سوالات (مثلا گزینه اول، سوم، دوم)"
+      responses:
+        '201': { description: "کاربر برنده شد و کد تخفیف صادر شد | Won voucher" }
+        '200': { description: "پاسخ‌ها ثبت شد اما امتیاز کافی نبود | Played but didn't win" }
+        '403': { description: "شما قبلاً در این مسابقه شرکت کرده‌اید | Already played" }
+
+  /api/v1/campaigns:
+    get:
+      tags: [6. Gamification & Campaigns]
+      summary: لیست مسابقات فعال | Get Active Campaigns
+      description: |
+        **فارسی:** دریافت سوالات مسابقه (برای مشتریان، جواب‌های صحیح مخفی می‌شود).
+      security:
+        - BearerAuth: []
+      responses:
+        '200': { description: "لیست دریافت شد | Retrieved successfully" }
+  # ==========================================
+  # ماژول ۷: ارتباط با مشتریان (CRM)
+  # ==========================================
+  /api/v1/crm/customers:
+    get:
+      tags: [7. CRM & Customers]
+      summary: لیست مشتریان رستوران | Get Customers
+      description: |
+        **فارسی:** دریافت لیست تمامی مشتریانی که تا به حال از رستوران خرید کرده‌اند (نیاز به کد CRM-501).
+        **English:** Retrieve a list of all customers who have purchased from the restaurant.
+      security:
+        - BearerAuth: []
+      responses:
+        '200': { description: "لیست دریافت شد | Retrieved" }
+
+  /api/v1/crm/send-bulk-sms:
+    post:
+      tags: [7. CRM & Customers]
+      summary: ارسال پیامک گروهی | Send Bulk SMS
+      description: |
+        **فارسی:** ارسال پیامک تبلیغاتی یا تخفیف به یک لیست خاص از مشتریان (نیاز به کد CRM-502).
+        **English:** Send marketing SMS to a specific list of customers.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                targetCustomerIds:
+                  type: array
+                  items: { type: string }
+                message: { type: string, example: "تخفیف ویژه امشب! منتظرتون هستیم." }
+      responses:
+        '200': { description: "پیامک‌ها با موفقیت ارسال شدند | SMS sent" }
+
+  # ==========================================
+  # ماژول ۸: تولید بارکد (QR Code)
+  # ==========================================
+  /api/v1/qr-code/generate:
+    post:
+      tags: [8. QR Codes]
+      summary: تولید بارکد میزها | Generate QR Codes
+      description: |
+        **فارسی:** تولید تصویر بارکد (Base64) برای میزهای رستوران جهت اسکن توسط مشتری (نیاز به کد QRC-701).
+        **English:** Generate Base64 QR code images for restaurant tables.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tableNumbers:
+                  type: array
+                  items: { type: number }
+                  example: [1, 2, 3, 4, 5]
+      responses:
+        '200': { description: "بارکدها تولید شدند | QR Codes generated" }
+
+  # ==========================================
+  # ماژول ۹: گزارشات مالی (Analytics)
+  # ==========================================
+  /api/v1/analytics/kpi:
+    get:
+      tags: [9. Analytics & Reports]
+      summary: شاخص‌های کلیدی فروش | Dashboard KPIs
+      description: |
+        **فارسی:** دریافت مجموع درآمد، تخفیف‌ها و تعداد سفارشات (نیاز به کد FIN-301).
+        **English:** Get total revenue, discounts, and order counts.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: tenantId
+          required: true
+          schema: { type: string }
+          description: آیدی رستوران
+      responses:
+        '200': { description: "اطلاعات دریافت شد | Retrieved" }
+
+  /api/v1/analytics/sales-chart:
+    get:
+      tags: [9. Analytics & Reports]
+      summary: نمودار فروش ۳۰ روزه | Sales Chart
+      description: |
+        **فارسی:** دریافت دیتای مورد نیاز برای رسم نمودار خطیِ فروش روزانه.
+        **English:** Get data to render the daily sales chart.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: tenantId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: "دیتای نمودار دریافت شد | Chart data retrieved" }
+
+  # ==========================================
+  # ماژول ۱۰: سیستم پشتیبانی (Ticketing)
+  # ==========================================
+  /api/v1/tickets:
+    get:
+      tags: [10. Ticketing Support]
+      summary: لیست تیکت‌ها | Get Tickets
+      description: |
+        **فارسی:** مشاهده لیست تیکت‌های پشتیبانی (نیاز به کد TKT-801).
+        **English:** View the list of support tickets.
+      security:
+        - BearerAuth: []
+      responses:
+        '200': { description: "لیست دریافت شد | Retrieved" }
+
+    post:
+      tags: [10. Ticketing Support]
+      summary: ثبت تیکت جدید | Create Ticket
+      description: |
+        **فارسی:** باز کردن یک تیکت جدید با قابلیت آپلود چندین عکس/اسکرین‌شات از ارور (نیاز به کد TKT-802).
+        **English:** Open a new ticket with multiple file uploads.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                subject: { type: string, example: "مشکل در ثبت سفارش میز ۲" }
+                department: { type: string, example: "Technical" }
+                message: { type: string, example: "سیستم خطای ۵۰۰ میدهد." }
+                files:
+                  type: array
+                  items: { type: string, format: binary }
+                  description: "اسکرین‌شات‌های خطا"
+      responses:
+        '201': { description: "تیکت ثبت شد | Ticket created" }
+
+  /api/v1/tickets/{id}/reply:
+    post:
+      tags: [10. Ticketing Support]
+      summary: ارسال پاسخ در تیکت | Reply to Ticket
+      description: |
+        **فارسی:** جواب دادن به یک تیکت موجود همراه با آپلود عکس (نیاز به کد TKT-803).
+        **English:** Reply to an existing ticket with file attachments.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                message: { type: string, example: "لطفاً یک بار صفحه را رفرش کنید." }
+                files:
+                  type: array
+                  items: { type: string, format: binary }
+      responses:
+        '200': { description: "پاسخ ثبت شد | Reply added" }
+  # ==========================================
+  # ماژول ۱۱: ردگیری پرسنل و سیستم (Audit Logs)
+  # ==========================================
+  /api/v1/audit-logs:
+    get:
+      tags: [11. Audit Logs]
+      summary: لیست لاگ‌ها و فعالیت‌ها | Get Audit Logs
+      description: |
+        **فارسی:** دریافت لیست فعالیت‌های انجام شده در سیستم (مثل ورود، تغییر قیمت، حذف غذا). این بخش برای مچ‌گیری و نظارت مدیر رستوران بر پرسنل است.
+        **English:** Retrieve a paginated list of system activities performed by staff to monitor operations.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: sort
+          schema:
+            type: string
+            default: "-createdAt"
+          description: مرتب‌سازی (برای نمایش جدیدترین لاگ‌ها در ابتدا، از -createdAt استفاده کنید)
+        - in: query
+          name: category
+          schema:
+            type: string
+            enum: [security, kpi, system]
+          description: فیلتر کردن لاگ‌ها بر اساس دسته‌بندی (امنیتی، مالی، سیستمی)
+        - in: query
+          name: page
+          schema:
+            type: number
+            default: 1
+          description: شماره صفحه (برای صفحه‌بندی)
+        - in: query
+          name: limit
+          schema:
+            type: number
+            default: 10
+          description: تعداد آیتم در هر صفحه
+      responses:
+        '200':
+          description: "لیست لاگ‌ها با موفقیت دریافت شد | Logs retrieved successfully"
+        '403':
+          description: "شما اجازه دسترسی به این بخش را ندارید (فقط مدیر/سوپرادمین) | Forbidden"
+
