@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema({
-    tenantId: {
+    branchId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Tenant",
-        required: [true, "Tenant ID is required"]
+        ref: "Branch",
+        required: [true, "Branch ID is required"]
     },
     customerId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -20,17 +20,22 @@ const orderSchema = new mongoose.Schema({
         menuItemId: { type: mongoose.Schema.Types.ObjectId, ref: "MenuItem" },
         name: { type: String, required: true },
         price: { type: Number, required: true },
-        quantity: { type: Number, default: 1 }
+        quantity: { type: Number, default: 1, min: 1 }
     }],
     voucherId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Voucher",
         default: null
     },
-    totalAmount: { type: Number, required: true },    // جمع کل قبل از تخفیف
-    discountAmount: { type: Number, default: 0 },     // مقدار سود مشتری از گیمیفیکیشن
-    finalAmount: { type: Number, required: true }     // مبلغی که باید در صندوق پرداخت شود
+    totalAmount: { type: Number, required: true, min: 0 },
+    discountAmount: { type: Number, default: 0, min: 0 },
+    finalAmount: { type: Number, required: true, min: 0 }
 }, { timestamps: true });
+
+// Indexes
+orderSchema.index({ branchId: 1, createdAt: -1 });
+orderSchema.index({ customerId: 1, branchId: 1 });
+orderSchema.index({ branchId: 1, voucherId: 1 });
 
 const Order = mongoose.model("Order", orderSchema);
 export default Order;

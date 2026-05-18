@@ -6,13 +6,13 @@ import {
     sendBulkSms
 } from "../Controllers/CrmCn.js";
 import { protect } from "../Middlewares/AuthMw.js";
-import { applyTenantScope } from "../Middlewares/TenantScopeMw.js";
+import { applyBranchScope } from "../Middlewares/TenantScopeMw.js";
 import { requirePermission, PERMISSIONS } from "../Middlewares/PermissionMw.js";
 
 const crmRouter = express.Router();
 
 crmRouter.use(protect);
-crmRouter.use(applyTenantScope);
+crmRouter.use(applyBranchScope);
 
 // -----------------------------------------------------------
 // دسترسی مشاهده مشتریان (CRM-501)

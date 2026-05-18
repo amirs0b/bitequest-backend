@@ -25,15 +25,16 @@ export const PERMISSIONS = {
     CRM_VIEW: 'CRM-501',
     CRM_SMS: 'CRM-502',
 
-    // دسترسی‌های رستوران
-    TENANT_EDIT: 'TNT-601',
+    // Branch & Organization management
+    BRANCH_EDIT: 'BRN-601',
+    ORG_EDIT: 'ORG-602',
     QR_GENERATE: 'QRC-701',
 
-    // 👈 پیش‌بینی دسترسی‌های سیستم تیکتینگ و پشتیبانی
-    TICKET_VIEW: 'TKT-801',   // قابلیت دیدن لیست تیکت‌ها
-    TICKET_CREATE: 'TKT-802', // قابلیت باز کردن تیکت جدید
-    TICKET_REPLY: 'TKT-803',  // قابلیت پاسخ دادن به تیکت‌ها (مخصوص تیم پشتیبانی)
-    TICKET_CLOSE: 'TKT-804'   // قابلیت بستن تیکت
+    // Ticketing & Support
+    TICKET_VIEW: 'TKT-801',
+    TICKET_CREATE: 'TKT-802',
+    TICKET_REPLY: 'TKT-803',
+    TICKET_CLOSE: 'TKT-804'
 };
 
 export const requirePermission = (permissionCode) => {

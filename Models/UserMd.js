@@ -4,7 +4,8 @@ const userSchema = new mongoose.Schema({
     username: {
         type: String,
         required: [true, "Username is required"],
-        unique: [true, "Username must be unique"]
+        unique: true,
+        trim: true
     },
     password: {
         type: String,
@@ -15,7 +16,6 @@ const userSchema = new mongoose.Schema({
         enum: ["superAdmin", "staff", "analyst", "owner", "manager", "cashier"],
         default: "staff"
     },
-    // 👈 اضافه شدن فیلد دسترسی‌های خرد (PBAC)
     permissions: [{
         type: String
     }],
@@ -27,12 +27,22 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    tenantId: {
+    organizationId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Tenant",
+        ref: "Organization",
+        default: null
+    },
+    branchId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Branch",
         default: null
     }
 }, { timestamps: true });
+
+// Indexes
+userSchema.index({ organizationId: 1, isArchived: 1 });
+userSchema.index({ branchId: 1, isArchived: 1 });
+userSchema.index({ role: 1 });
 
 const User = mongoose.model("User", userSchema);
 export default User;

@@ -1,5 +1,7 @@
 import Order from "../Models/OrderMd.js";
 import Customer from "../Models/CustomerMd.js";
+import Branch from "../Models/BranchMd.js";
+import Organization from "../Models/OrganizationMd.js";
 import mongoose from "mongoose";
 import { catchAsync, HandleERROR } from "vanta-api";
 
@@ -7,10 +9,10 @@ import { catchAsync, HandleERROR } from "vanta-api";
 // 1. دریافت لیست تمام مشتریان یک رستوران (با محاسبه LTV)
 // ------------------------------------------------------------------
 export const getRestaurantCustomers = catchAsync(async (req, res, next) => {
-    const tenantId = new mongoose.Types.ObjectId(req.query.tenantId || req.user.tenantId);
+    const branchId = new mongoose.Types.ObjectId(req.query.branchId || req.user.branchId);
 
     const customers = await Order.aggregate([
-        { $match: { tenantId } },
+        { $match: { branchId } },
         {
             $group: {
                 _id: "$customerId",
@@ -50,19 +52,19 @@ export const getRestaurantCustomers = catchAsync(async (req, res, next) => {
 // ------------------------------------------------------------------
 export const getCustomerProfile = catchAsync(async (req, res, next) => {
     const { customerId } = req.params;
-    const tenantId = req.query.tenantId || req.user.tenantId;
+    const branchId = req.query.branchId || req.user.branchId;
 
     const customerInfo = await Customer.findById(customerId).select("-otp -otpExpiresAt");
     if (!customerInfo) return next(new HandleERROR("Customer not found", 404));
 
     // استخراج تاریخچه سفارشات این مشتری در این رستوران خاص
-    const orderHistory = await Order.find({ customerId, tenantId })
+    const orderHistory = await Order.find({ customerId, branchId })
         .populate("voucherId", "code discountPercentage posCode")
         .sort("-createdAt");
 
     // استخراج غذاهای مورد علاقه (Most Ordered Items)
     const favoriteItems = await Order.aggregate([
-        { $match: { customerId: new mongoose.Types.ObjectId(customerId), tenantId: new mongoose.Types.ObjectId(tenantId) } },
+        { $match: { customerId: new mongoose.Types.ObjectId(customerId), branchId: new mongoose.Types.ObjectId(branchId) } },
         { $unwind: "$items" },
         {
             $group: {
@@ -92,13 +94,13 @@ export const getCustomerProfile = catchAsync(async (req, res, next) => {
 // 3. بخش‌بندی هوشمند مشتریان (Segmentation)
 // ------------------------------------------------------------------
 export const getCustomerSegments = catchAsync(async (req, res, next) => {
-    const tenantId = new mongoose.Types.ObjectId(req.query.tenantId || req.user.tenantId);
+    const branchId = new mongoose.Types.ObjectId(req.query.branchId || req.user.branchId);
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const segments = await Order.aggregate([
-        { $match: { tenantId } },
+        { $match: { branchId } },
         {
             $group: {
                 _id: "$customerId",
@@ -143,7 +145,6 @@ export const getCustomerSegments = catchAsync(async (req, res, next) => {
 
 export const sendBulkSms = catchAsync(async (req, res, next) => {
     const { targetCustomerIds, message } = req.body;
-    const tenantId = req.user.tenantId;
 
     if (!targetCustomerIds || !Array.isArray(targetCustomerIds) || targetCustomerIds.length === 0) {
         return next(new HandleERROR("Please provide a list of customers to message.", 400));
@@ -153,18 +154,19 @@ export const sendBulkSms = catchAsync(async (req, res, next) => {
         return next(new HandleERROR("Message content cannot be empty.", 400));
     }
 
-    // بررسی موجودی کیف پول پیامکی رستوران
-    const tenant = await Tenant.findById(tenantId);
-    if (!tenant) return next(new HandleERROR("Tenant not found", 404));
+    // SMS wallet lives at organization level
+    const branch = await Branch.findById(req.user.branchId);
+    if (!branch) return next(new HandleERROR("Branch not found", 404));
 
-    if (tenant.smsWalletBalance < targetCustomerIds.length) {
-        return next(new HandleERROR(`Insufficient SMS wallet balance. You need ${targetCustomerIds.length} SMS charges, but have only ${tenant.smsWalletBalance}.`, 403));
+    const org = await Organization.findById(branch.organizationId);
+    if (!org) return next(new HandleERROR("Organization not found", 404));
+
+    if (org.smsWalletBalance < targetCustomerIds.length) {
+        return next(new HandleERROR(`Insufficient SMS wallet balance. You need ${targetCustomerIds.length} SMS charges, but have only ${org.smsWalletBalance}.`, 403));
     }
 
-    // واکشی شماره تلفن مشتریان هدف
     const customers = await Customer.find({ _id: { $in: targetCustomerIds } });
 
-    // 💡 شبیه‌ساز ارسال پیامک (بعداً با API کاوه‌نگار یا ملی‌پيامک جایگزین می‌شود)
     const sendSmsProvider = async (phone, msg) => {
         console.log(`[BULK SMS] -> Sending to ${phone}: ${msg}`);
         return true;
@@ -178,15 +180,14 @@ export const sendBulkSms = catchAsync(async (req, res, next) => {
         }
     }
 
-    // کسر هزینه پیامک‌های ارسال شده از کیف پول رستوران
-    tenant.smsWalletBalance -= successCount;
-    await tenant.save();
+    org.smsWalletBalance -= successCount;
+    await org.save();
 
     return res.status(200).json({
         success: true,
         message: `Successfully sent SMS to ${successCount} customers.`,
         data: {
-            remainingSmsBalance: tenant.smsWalletBalance
+            remainingSmsBalance: org.smsWalletBalance
         }
     });
 });

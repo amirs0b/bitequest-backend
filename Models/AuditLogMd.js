@@ -1,9 +1,9 @@
 import mongoose from "mongoose";
 
 const auditLogSchema = new mongoose.Schema({
-    tenantId: {
+    branchId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Tenant",
+        ref: "Branch",
         default: null
     },
     category: {
@@ -33,6 +33,11 @@ const auditLogSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.Mixed
     }
 }, { timestamps: true });
+
+// Indexes
+auditLogSchema.index({ branchId: 1, createdAt: -1 });
+auditLogSchema.index({ actorId: 1, actorModel: 1 });
+auditLogSchema.index({ category: 1, action: 1 });
 
 const AuditLog = mongoose.model("AuditLog", auditLogSchema);
 export default AuditLog;

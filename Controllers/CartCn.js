@@ -5,12 +5,12 @@ import MenuItem from "../Models/MenuMd.js";
 import { catchAsync, HandleERROR } from "vanta-api";
 
 export const syncCart = catchAsync(async (req, res, next) => {
-    const { items, voucherId, tenantId } = req.body;
+    const { items, voucherId, branchId } = req.body;
     const customerId = req.customer.id;
 
     // واکشی امن قیمت‌ها از دیتابیس (جلوگیری از تقلب)
     const menuItemIds = items.map(i => i.menuItemId);
-    const dbMenuItems = await MenuItem.find({ _id: { $in: menuItemIds }, tenantId });
+    const dbMenuItems = await MenuItem.find({ _id: { $in: menuItemIds }, branchId });
 
     let cartTotal = 0;
     const secureItems = items.map(item => {
@@ -24,7 +24,7 @@ export const syncCart = catchAsync(async (req, res, next) => {
     let validVoucherId = null;
     if (voucherId) {
         const voucher = await Voucher.findOne({
-            _id: voucherId, customerId, tenantId, isUsed: false, expiresAt: { $gte: new Date() }
+            _id: voucherId, customerId, branchId, isUsed: false, expiresAt: { $gte: new Date() }
         }).populate('campaignId');
 
         if (!voucher) return next(new HandleERROR("This voucher is invalid or expired.", 400));
@@ -34,23 +34,23 @@ export const syncCart = catchAsync(async (req, res, next) => {
         validVoucherId = voucher._id;
     }
 
-    let cart = await Cart.findOne({ customerId, tenantId, status: "active" });
+    let cart = await Cart.findOne({ customerId, branchId, status: "active" });
     if (cart) {
         cart.items = secureItems;
         if (voucherId !== undefined) cart.voucherId = validVoucherId;
         await cart.save();
     } else {
-        cart = await Cart.create({ tenantId, customerId, items: secureItems, voucherId: validVoucherId });
+        cart = await Cart.create({ branchId, customerId, items: secureItems, voucherId: validVoucherId });
     }
 
     return res.status(200).json({ success: true, message: "Cart synced", data: { cart } });
 });
 
 export const getActiveCart = catchAsync(async (req, res, next) => {
-    const { tenantId } = req.query;
+    const { branchId } = req.query;
     const customerId = req.customer.id;
 
-    const cart = await Cart.findOne({ customerId, tenantId, status: "active" }).populate('voucherId');
+    const cart = await Cart.findOne({ customerId, branchId, status: "active" }).populate('voucherId');
     if (!cart) return next(new HandleERROR("Your cart is empty", 404));
 
     return res.status(200).json({ success: true, data: { cart } });
@@ -76,7 +76,7 @@ export const finalizeOrder = catchAsync(async (req, res, next) => {
     }
 
     const finalizedOrder = await Order.create({
-        tenantId: cart.tenantId,
+        branchId: cart.branchId,
         customerId: cart.customerId,
         cartId: cart._id,
         items: cart.items,

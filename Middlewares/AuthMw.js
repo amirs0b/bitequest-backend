@@ -4,7 +4,7 @@ import User from "../Models/UserMd.js";
 import Customer from "../Models/CustomerMd.js";
 
 // ------------------------------------------------------------------
-// 1. میدل‌ور اصلی: بررسی توکن و شناسایی نوع کاربر
+// 1. Token Verification & User Identification
 // ------------------------------------------------------------------
 export const protect = catchAsync(async (req, res, next) => {
     let token;
@@ -27,6 +27,7 @@ export const protect = catchAsync(async (req, res, next) => {
     if (decoded.accountType === "user") {
         const currentUser = await User.findById(decoded.id).select("-password");
         if (!currentUser) return next(new HandleERROR("The user belonging to this token no longer exists.", 401));
+        if (currentUser.isArchived) return next(new HandleERROR("This account has been deactivated.", 403));
         req.user = currentUser;
 
     } else if (decoded.accountType === "customer") {
@@ -42,19 +43,17 @@ export const protect = catchAsync(async (req, res, next) => {
 });
 
 // ------------------------------------------------------------------
-// 2. میدل‌ور دسترسی‌ها (هوشمند برای پرسنل و مشتری)
+// 2. Role-Based Access Control
 // ------------------------------------------------------------------
 export const restrictTo = (...roles) => {
     return (req, res, next) => {
-        // الف) اگر کاربر مشتری است
         if (req.customer) {
             if (!roles.includes("customer")) {
                 return next(new HandleERROR("Access denied. This route is for staff only.", 403));
             }
-            return next(); // مشتری اجازه عبور دارد
+            return next();
         }
 
-        // ب) اگر کاربر پرسنل است
         if (!req.user) {
             return next(new HandleERROR("You are not logged in.", 401));
         }
@@ -68,7 +67,7 @@ export const restrictTo = (...roles) => {
 };
 
 // ------------------------------------------------------------------
-// 3. میدل‌ور امنیتی: اجبار به تغییر رمز عبور در اولین ورود
+// 3. Force Password Change on First Login
 // ------------------------------------------------------------------
 export const requirePasswordChange = (req, res, next) => {
     if (req.user && req.user.forcePasswordChange) {

@@ -9,7 +9,7 @@ import {
     getMyVouchers
 } from "../Controllers/CampaignCn.js";
 import { protect, restrictTo } from "../Middlewares/AuthMw.js";
-import { applyTenantScope } from "../Middlewares/TenantScopeMw.js";
+import { applyBranchScope } from "../Middlewares/TenantScopeMw.js";
 
 const campaignRouter = express.Router();
 
@@ -31,7 +31,7 @@ campaignRouter.get("/:id", getCampaignById);
 // 2. مسیرهای مدیریت کمپین (مخصوص ادمین‌ها و مدیران رستوران)
 // -----------------------------------------------------------
 campaignRouter.use(restrictTo("superAdmin", "owner", "manager"));
-campaignRouter.use(applyTenantScope); // اعمال خودکار tenantId
+campaignRouter.use(applyBranchScope);
 
 campaignRouter.post("/", createCampaign);
 campaignRouter.patch("/:id", updateCampaign);

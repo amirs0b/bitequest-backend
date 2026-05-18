@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
 
 const cartSchema = new mongoose.Schema({
-    tenantId: {
+    branchId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Tenant",
-        required: [true, "Tenant ID is required"]
+        ref: "Branch",
+        required: [true, "Branch ID is required"]
     },
     customerId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -13,9 +13,9 @@ const cartSchema = new mongoose.Schema({
     },
     items: [{
         menuItemId: { type: mongoose.Schema.Types.ObjectId, ref: "MenuItem" },
-        name: String, // ذخیره نام برای تحلیل سریع‌تر بدون Join
+        name: String,
         price: Number,
-        quantity: { type: Number, default: 1 }
+        quantity: { type: Number, default: 1, min: 1 }
     }],
     voucherId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -32,6 +32,10 @@ const cartSchema = new mongoose.Schema({
         default: false
     }
 }, { timestamps: true });
+
+// Indexes
+cartSchema.index({ customerId: 1, branchId: 1, status: 1 });
+cartSchema.index({ status: 1, updatedAt: 1 });
 
 const Cart = mongoose.model("Cart", cartSchema);
 export default Cart;

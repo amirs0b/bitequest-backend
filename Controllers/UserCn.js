@@ -23,7 +23,7 @@ export const createUser = catchAsync(async (req, res, next) => {
         password: hashPassword,
         role,
         permissions: permissions || [],
-        tenantId: req.body.tenantId || null,
+        branchId: req.body.branchId || null,
         forcePasswordChange: true
     });
 
@@ -60,7 +60,7 @@ export const getAllUsers = catchAsync(async (req, res, next) => {
 export const updateUser = catchAsync(async (req, res, next) => {
     const { id } = req.params;
     const query = { _id: id, isArchived: false };
-    if (req.user.role !== "superAdmin") query.tenantId = req.user.tenantId;
+    if (req.user.role !== "superAdmin") query.branchId = req.user.branchId;
 
     const userToUpdate = await User.findOne(query);
     if (!userToUpdate) return next(new HandleERROR("User not found or permission denied", 404));
@@ -94,7 +94,7 @@ export const archiveUser = catchAsync(async (req, res, next) => {
     const { id } = req.params;
     const query = { _id: id, isArchived: false };
 
-    if (req.user.role !== "superAdmin") query.tenantId = req.user.tenantId;
+    if (req.user.role !== "superAdmin") query.branchId = req.user.branchId;
 
     const user = await User.findOneAndUpdate(query, { isArchived: true }, { new: true });
 

@@ -8,10 +8,10 @@ export const generateTableQrCodes = catchAsync(async (req, res, next) => {
     // مدیر می‌تواند درخواست تولید بارکد برای چندین میز را همزمان بدهد: [1, 2, 3, 4, 5]
     const { tableNumbers } = req.body;
 
-    // 👈 رفع باگ: شناسایی tenantId حتی اگر سوپرادمین درخواست داده باشد
-    const tenantId = req.user.role === 'superAdmin' ? req.body.tenantId : req.user.tenantId;
+    // 👈 رفع باگ: شناسایی branchId حتی اگر سوپرادمین درخواست داده باشد
+    const branchId = req.user.role === 'superAdmin' ? req.body.branchId : req.user.branchId;
 
-    if (!tenantId) {
+    if (!branchId) {
         return next(new HandleERROR("Tenant ID is required to generate QR codes.", 400));
     }
 
@@ -25,7 +25,7 @@ export const generateTableQrCodes = catchAsync(async (req, res, next) => {
     // پردازش موازی برای تولید سریع بارکدها
     const qrCodes = await Promise.all(tableNumbers.map(async (tableNumber) => {
         // لینکی که مشتری با اسکن بارکد به آن هدایت می‌شود
-        const scanUrl = `${frontendBaseUrl}/menu?tenantId=${tenantId}&table=${tableNumber}`;
+        const scanUrl = `${frontendBaseUrl}/menu?branchId=${branchId}&table=${tableNumber}`;
 
         // تولید تصویر Base64 با بالاترین کیفیت (H) و بدون افت کیفیت در چاپ
         const qrImageBase64 = await QRCode.toDataURL(scanUrl, {

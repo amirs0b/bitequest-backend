@@ -7,7 +7,7 @@ import {
     updateTicketStatus
 } from "../Controllers/TicketCn.js";
 import { protect } from "../Middlewares/AuthMw.js";
-import { applyTenantScope } from "../Middlewares/TenantScopeMw.js";
+import { applyBranchScope } from "../Middlewares/TenantScopeMw.js";
 import { requirePermission, PERMISSIONS } from "../Middlewares/PermissionMw.js";
 import { uploadMultipleImages } from "../Middlewares/UploadMw.js"; // 👈 استفاده از آپلود چندتایی برای پیوست‌ها
 
@@ -17,7 +17,7 @@ const ticketRouter = express.Router();
 // 1. محافظت پایه و جلوگیری از نشت دیتا بین رستوران‌ها
 // ------------------------------------------------------------------
 ticketRouter.use(protect);
-ticketRouter.use(applyTenantScope);
+ticketRouter.use(applyBranchScope);
 
 // ------------------------------------------------------------------
 // 2. مسیرهای عملیاتی با قفل‌های امنیتی PBAC

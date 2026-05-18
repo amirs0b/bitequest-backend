@@ -22,9 +22,8 @@ const multerStorage = multer.diskStorage({
         // استخراج پسوند فایل (مثلاً .jpg یا .png)
         const ext = file.mimetype.split('/')[1];
 
-        // ساخت نام یکتا: tenantId-timestamp.ext
-        // اگر کاربر لاگین نکرده بود (مثل ثبت‌نام اولیه رستوران)، از کلمه new-tenant استفاده می‌شود
-        const prefix = req.user ? req.user.tenantId.toString() : 'new-tenant';
+        // Unique filename: branchId-timestamp.ext (fallback to 'upload' for unauthenticated uploads)
+        const prefix = req.user ? (req.user.branchId || req.user.organizationId || req.user._id).toString() : 'upload';
         const uniqueFilename = `${prefix}-${Date.now()}.${ext}`;
 
         cb(null, uniqueFilename);

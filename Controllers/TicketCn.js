@@ -8,7 +8,7 @@ export const createTicket = catchAsync(async (req, res, next) => {
     const { subject, department, priority, message } = req.body;
 
     // تعیین اینکه تیکت برای کدام رستوران است
-    const tenantId = req.user.role === 'superAdmin' ? req.body.tenantId : req.user.tenantId;
+    const branchId = req.user.role === 'superAdmin' ? req.body.branchId : req.user.branchId;
 
     if (!subject || !message) {
         return next(new HandleERROR("Subject and initial message are required.", 400));
@@ -21,7 +21,7 @@ export const createTicket = catchAsync(async (req, res, next) => {
     }
 
     const newTicket = await Ticket.create({
-        tenantId,
+        branchId,
         creatorId: req.user.id,
         subject,
         department,
@@ -51,7 +51,7 @@ export const getAllTickets = catchAsync(async (req, res, next) => {
 
     // 🔒 اعمال دیوار امنیتی: رستوران‌ها فقط تیکت‌های خودشان را می‌بینند
     if (req.user.role !== "superAdmin") {
-        query.where({ tenantId: req.user.tenantId });
+        query.where({ branchId: req.user.branchId });
     }
 
     const features = new ApiFeatures(query, req.query)
@@ -77,7 +77,7 @@ export const getTicketById = catchAsync(async (req, res, next) => {
 
     // 🔒 امنیت: جلوگیری از دیدن تیکت‌های رستوران رقیب
     if (req.user.role !== "superAdmin") {
-        query.tenantId = req.user.tenantId;
+        query.branchId = req.user.branchId;
     }
 
     const ticket = await Ticket.findOne(query).populate('creatorId', 'username role');
@@ -98,7 +98,7 @@ export const replyToTicket = catchAsync(async (req, res, next) => {
     if (!message) return next(new HandleERROR("Message content is required.", 400));
 
     const query = { _id: req.params.id };
-    if (req.user.role !== "superAdmin") query.tenantId = req.user.tenantId;
+    if (req.user.role !== "superAdmin") query.branchId = req.user.branchId;
 
     const ticket = await Ticket.findOne(query);
     if (!ticket) return next(new HandleERROR("Ticket not found", 404));
@@ -146,7 +146,7 @@ export const updateTicketStatus = catchAsync(async (req, res, next) => {
     if (!status) return next(new HandleERROR("Status is required.", 400));
 
     const query = { _id: req.params.id };
-    if (req.user.role !== "superAdmin") query.tenantId = req.user.tenantId;
+    if (req.user.role !== "superAdmin") query.branchId = req.user.branchId;
 
     const ticket = await Ticket.findOneAndUpdate(
         query,

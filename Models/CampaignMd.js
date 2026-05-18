@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
 
 const campaignSchema = new mongoose.Schema({
-    tenantId: {
+    branchId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Tenant",
-        required: [true, "Tenant ID is required"]
+        ref: "Branch",
+        required: [true, "Branch ID is required"]
     },
     title: {
         type: String,
@@ -54,6 +54,10 @@ const campaignSchema = new mongoose.Schema({
         posCode: { type: String, default: null } // کد تعریف شده در سیستم حسابداری رستوران
     }]
 }, { timestamps: true });
+
+// Indexes
+campaignSchema.index({ branchId: 1, isActive: 1, isArchived: 1 });
+campaignSchema.index({ startDate: 1, endDate: 1 });
 
 const Campaign = mongoose.model("Campaign", campaignSchema);
 export default Campaign;

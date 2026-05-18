@@ -32,13 +32,11 @@ const replySchema = new mongoose.Schema({
 // 2. اسکیمای اصلی تیکت
 // ------------------------------------------------------------------
 const ticketSchema = new mongoose.Schema({
-    // تیکت متعلق به کدام رستوران است؟
-    tenantId: {
+    branchId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Tenant",
+        ref: "Branch",
         required: true
     },
-    // کدام کارمند/مدیر این رستوران تیکت را باز کرده است؟
     creatorId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
@@ -67,6 +65,10 @@ const ticketSchema = new mongoose.Schema({
     // آرایه‌ای از چت‌های رد و بدل شده در این تیکت
     replies: [replySchema]
 }, { timestamps: true });
+
+// Indexes
+ticketSchema.index({ branchId: 1, status: 1 });
+ticketSchema.index({ creatorId: 1 });
 
 const Ticket = mongoose.model("Ticket", ticketSchema);
 export default Ticket;

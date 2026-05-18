@@ -6,13 +6,13 @@ import {
     getSalesChartData
 } from "../Controllers/AnalyticsCn.js";
 import { protect } from "../Middlewares/AuthMw.js";
-import { applyTenantScope } from "../Middlewares/TenantScopeMw.js";
+import { applyBranchScope } from "../Middlewares/TenantScopeMw.js";
 import { requirePermission, PERMISSIONS } from "../Middlewares/PermissionMw.js"; // 👈 اضافه شد
 
 const analyticsRouter = express.Router();
 
 analyticsRouter.use(protect);
-analyticsRouter.use(applyTenantScope);
+analyticsRouter.use(applyBranchScope);
 
 // 👈 نصب قفل امنیتی PBAC برای دسترسی به آمار مالی
 analyticsRouter.use(requirePermission(PERMISSIONS.FINANCE_VIEW));

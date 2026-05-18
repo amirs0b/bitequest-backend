@@ -7,15 +7,15 @@ import { catchAsync, HandleERROR } from "vanta-api"; // 👈 HandleERROR اضا�
 // ------------------------------------------------------------------
 export const getDashboardKPIs = catchAsync(async (req, res, next) => {
     // 👈 سد دفاعی جلوگیری از Crash
-    if (!req.query.tenantId) {
+    if (!req.query.branchId) {
         return next(new HandleERROR("Tenant ID is required for analytics processing.", 400));
     }
 
     const { start, end } = req.query;
-    const tenantId = new mongoose.Types.ObjectId(req.query.tenantId);
+    const branchId = new mongoose.Types.ObjectId(req.query.branchId);
 
     const dateFilter = {
-        tenantId,
+        branchId,
         createdAt: {
             $gte: start ? new Date(start) : new Date(new Date().setDate(new Date().getDate() - 30)),
             $lte: end ? new Date(end) : new Date()
@@ -45,14 +45,14 @@ export const getDashboardKPIs = catchAsync(async (req, res, next) => {
 // 2. تحلیل سودآوری گیمیفیکیشن (Campaign ROI)
 // ------------------------------------------------------------------
 export const getCampaignROI = catchAsync(async (req, res, next) => {
-    if (!req.query.tenantId) {
+    if (!req.query.branchId) {
         return next(new HandleERROR("Tenant ID is required for analytics processing.", 400));
     }
 
-    const tenantId = new mongoose.Types.ObjectId(req.query.tenantId);
+    const branchId = new mongoose.Types.ObjectId(req.query.branchId);
 
     const roiStats = await Order.aggregate([
-        { $match: { tenantId } },
+        { $match: { branchId } },
         {
             $group: {
                 _id: { hasVoucher: { $gt: ["$voucherId", null] } },
@@ -74,14 +74,14 @@ export const getCampaignROI = catchAsync(async (req, res, next) => {
 // 3. پرفروش‌ترین آیتم‌های منو
 // ------------------------------------------------------------------
 export const getTopSellingItems = catchAsync(async (req, res, next) => {
-    if (!req.query.tenantId) {
+    if (!req.query.branchId) {
         return next(new HandleERROR("Tenant ID is required for analytics processing.", 400));
     }
 
-    const tenantId = new mongoose.Types.ObjectId(req.query.tenantId);
+    const branchId = new mongoose.Types.ObjectId(req.query.branchId);
 
     const topItems = await Order.aggregate([
-        { $match: { tenantId } },
+        { $match: { branchId } },
         { $unwind: "$items" },
         {
             $group: {
@@ -105,14 +105,14 @@ export const getTopSellingItems = catchAsync(async (req, res, next) => {
 // 4. دیتای نمودار فروش (Daily Sales Chart)
 // ------------------------------------------------------------------
 export const getSalesChartData = catchAsync(async (req, res, next) => {
-    if (!req.query.tenantId) {
+    if (!req.query.branchId) {
         return next(new HandleERROR("Tenant ID is required for analytics processing.", 400));
     }
 
-    const tenantId = new mongoose.Types.ObjectId(req.query.tenantId);
+    const branchId = new mongoose.Types.ObjectId(req.query.branchId);
 
     const chartData = await Order.aggregate([
-        { $match: { tenantId } },
+        { $match: { branchId } },
         {
             $group: {
                 _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },

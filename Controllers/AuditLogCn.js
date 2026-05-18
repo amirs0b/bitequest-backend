@@ -14,7 +14,7 @@ export const getAuditLogs = catchAsync(async (req, res, next) => {
 
     // 2. ایزوله‌سازی داده‌ها: مدیر رستوران فقط لاگ‌های خودش را می‌بیند
     if (req.user.role !== "superAdmin") {
-        features.addManualFilters({ tenantId: req.user.tenantId });
+        features.addManualFilters({ branchId: req.user.branchId });
     }
 
     // 3. اجرای کوئری

@@ -1,24 +1,25 @@
 import { catchAsync } from "vanta-api";
 
-export const applyTenantScope = catchAsync(async (req, res, next) => {
-    // 1. اگر کاربری لاگین نکرده باشد، نیازی به این میدل‌ور نیست
+/**
+ * Branch Scope Middleware
+ * Ensures branch-level staff can only access their own branch's data.
+ * SuperAdmin and analyst roles bypass scoping (platform-wide access).
+ */
+export const applyBranchScope = catchAsync(async (req, res, next) => {
     if (!req.user) {
         return next();
     }
 
-    // 2. ادمین کل (superAdmin) و تحلیل‌گر دیتا (analyst) به همه رستوران‌ها دسترسی دارند
+    // Platform-level roles have unrestricted access
     if (req.user.role === "superAdmin" || req.user.role === "analyst") {
         return next();
     }
 
-    // 3. برای پرسنل رستوران (owner, manager, cashier):
-    // الف) در درخواست‌های GET، فقط اجازه دارند دیتای رستوران خودشان را ببینند
+    // Branch staff: scope all queries to their assigned branch
     if (req.method === "GET") {
-        req.query.tenantId = req.user.tenantId;
-    }
-    // ب) در درخواست‌های POST/PATCH، نمی‌توانند دیتایی برای رستوران دیگری بسازند
-    else {
-        req.body.tenantId = req.user.tenantId;
+        req.query.branchId = req.user.branchId;
+    } else {
+        req.body.branchId = req.user.branchId;
     }
 
     next();

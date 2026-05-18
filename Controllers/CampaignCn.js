@@ -76,7 +76,7 @@ export const getCampaignById = catchAsync(async (req, res, next) => {
 // ------------------------------------------------------------------
 export const updateCampaign = catchAsync(async (req, res, next) => {
     const query = { _id: req.params.id, isArchived: false };
-    if (req.user.role !== "superAdmin") query.tenantId = req.user.tenantId;
+    if (req.user.role !== "superAdmin") query.branchId = req.user.branchId;
 
     const campaign = await Campaign.findOneAndUpdate(query, req.body, { new: true, runValidators: true });
     if (!campaign) return next(new HandleERROR("Campaign not found or permission denied", 404));
@@ -86,7 +86,7 @@ export const updateCampaign = catchAsync(async (req, res, next) => {
 
 export const archiveCampaign = catchAsync(async (req, res, next) => {
     const query = { _id: req.params.id, isArchived: false };
-    if (req.user.role !== "superAdmin") query.tenantId = req.user.tenantId;
+    if (req.user.role !== "superAdmin") query.branchId = req.user.branchId;
 
     const campaign = await Campaign.findOneAndUpdate(query, { isArchived: true, isActive: false }, { new: true });
     if (!campaign) return next(new HandleERROR("Campaign not found", 404));
@@ -147,7 +147,7 @@ export const playCampaign = catchAsync(async (req, res, next) => {
     expirationDate.setDate(expirationDate.getDate() + wonTier.validityDays);
 
     const newVoucher = await Voucher.create({
-        tenantId: campaign.tenantId,
+        branchId: campaign.branchId,
         customerId: req.customer.id,
         campaignId: campaign._id,
         code: uniqueCode,
@@ -175,7 +175,7 @@ export const getMyVouchers = catchAsync(async (req, res, next) => {
         customerId: req.customer.id,
         isUsed: false,
         expiresAt: { $gte: new Date() }
-    }).populate('tenantId', 'name logo');
+    }).populate('branchId', 'name logo');
 
     return res.status(200).json({
         success: true,

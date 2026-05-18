@@ -6,19 +6,16 @@ import ApiFeatures, { catchAsync, HandleERROR } from "vanta-api";
 // ------------------------------------------------------------------
 export const createMenuItem = catchAsync(async (req, res, next) => {
     const { name, price, category } = req.body;
-    // نکته: req.body.tenantId توسط میدل‌ور applyTenantScope به صورت خودکار اضافه شده است
-
     if (!name || !price || !category) {
         return next(new HandleERROR("Name, price, and category are required", 400));
     }
 
-    // 👈 مدیریت آپلود عکس در زمان ایجاد غذای جدید
     if (req.file) {
         req.body.image = `/uploads/${req.file.filename}`;
     }
 
     const newMenuItem = await MenuItem.create({
-        tenantId: req.body.tenantId,
+        branchId: req.body.branchId,
         name,
         price,
         category,
@@ -55,8 +52,8 @@ export const getAllMenuItems = catchAsync(async (req, res, next) => {
         features.addManualFilters({ isAvailable: true });
 
         // ب) حتما باید مشخص کند منوی کدام رستوران را می‌خواهد
-        if (!req.query.tenantId) {
-            return next(new HandleERROR("Restaurant ID (tenantId) is required to view the menu.", 400));
+        if (!req.query.branchId) {
+            return next(new HandleERROR("Restaurant ID (branchId) is required to view the menu.", 400));
         }
     }
 
@@ -107,7 +104,7 @@ export const updateMenuItem = catchAsync(async (req, res, next) => {
     // کوئری امن: هم آیدی غذا چک می‌شود، هم آرشیو نبودن، و هم دسترسی صاحب رستوران
     const query = { _id: id, isArchived: false };
     if (req.user.role !== "superAdmin") {
-        query.tenantId = req.user.tenantId; // تا owner نتواند غذای رستوران رقیب را ویرایش کند
+        query.branchId = req.user.branchId; // تا owner نتواند غذای رستوران رقیب را ویرایش کند
     }
 
     const item = await MenuItem.findOneAndUpdate(query, req.body, {
@@ -136,7 +133,7 @@ export const archiveMenuItem = catchAsync(async (req, res, next) => {
 
     const query = { _id: id, isArchived: false };
     if (req.user.role !== "superAdmin") {
-        query.tenantId = req.user.tenantId;
+        query.branchId = req.user.branchId;
     }
 
     // به جای حذف فیزیکی، فقط فیلد بایگانی را فعال می‌کنیم

@@ -7,9 +7,10 @@ import { catchError, HandleERROR } from "vanta-api";
 import swaggerUi from "swagger-ui-express";
 import YAML from "yamljs";
 
-// 1. وارد کردن روت‌ها
+// 1. Import Routes
 import authRouter from "./Routes/Auth.js";
-import tenantRouter from "./Routes/Tenant.js";
+import organizationRouter from "./Routes/Organization.js";
+import branchRouter from "./Routes/Branch.js";
 import userRouter from "./Routes/User.js";
 import menuRouter from "./Routes/Menu.js";
 import campaignRouter from "./Routes/Campaign.js";
@@ -19,6 +20,8 @@ import customerAuthRouter from "./Routes/CustomerAuth.js";
 import qrRouter from "./Routes/QrCode.js";
 import superAdminRouter from "./Routes/SuperAdmin.js";
 import ticketRouter from "./Routes/Ticket.js";
+import crmRouter from "./Routes/Crm.js";
+import auditLogRouter from "./Routes/AuditLog.js";
 
 const __filename = fileURLToPath(import.meta.url);
 export const __dirname = path.dirname(__filename);
@@ -36,15 +39,17 @@ app.use(morgan("dev"));
 app.use(express.static(path.join(process.cwd(), 'public')));
 app.use("/uploads", express.static(path.join(process.cwd(), "public/uploads")));
 
-// 4. اتصال مسیرها (Routes)
+// 4. Mount Routes
 app.use("/api/v1/auth", authRouter);
-app.use("/api/v1/tenants", tenantRouter);
+app.use("/api/v1/organizations", organizationRouter);
+app.use("/api/v1/branches", branchRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/menu", menuRouter);
 app.use("/api/v1/campaigns", campaignRouter);
 app.use("/api/v1/carts", cartRouter);
 app.use("/api/v1/analytics", analyticsRouter);
 app.use("/api/v1/customers/auth", customerAuthRouter);
+app.use("/api/v1/crm", crmRouter);
 app.use("/api/v1/qrcode", qrRouter);
 app.use("/api/v1/tickets", ticketRouter);
 app.use("/api/v1/superadmin", superAdminRouter);

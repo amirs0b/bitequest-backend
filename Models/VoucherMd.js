@@ -1,9 +1,9 @@
 import mongoose from "mongoose";
 
 const voucherSchema = new mongoose.Schema({
-    tenantId: {
+    branchId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Tenant",
+        ref: "Branch",
         required: true
     },
     customerId: {
@@ -36,6 +36,11 @@ const voucherSchema = new mongoose.Schema({
         required: true
     }
 }, { timestamps: true });
+
+// Indexes
+voucherSchema.index({ customerId: 1, branchId: 1, isUsed: 1 });
+voucherSchema.index({ campaignId: 1 });
+voucherSchema.index({ expiresAt: 1 });
 
 const Voucher = mongoose.model("Voucher", voucherSchema);
 export default Voucher;

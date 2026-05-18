@@ -7,7 +7,7 @@ import {
     changeMyPassword
 } from "../Controllers/UserCn.js";
 import { protect } from "../Middlewares/AuthMw.js";
-import { applyTenantScope } from "../Middlewares/TenantScopeMw.js";
+import { applyBranchScope } from "../Middlewares/TenantScopeMw.js";
 import { requirePermission, PERMISSIONS } from "../Middlewares/PermissionMw.js";
 
 const userRouter = express.Router();
@@ -29,7 +29,7 @@ userRouter.patch("/change-my-password", changeMyPassword);
 // ۳. اعمال دیوارهای امنیتی مدیریتی (Authorization & Scope)
 // ------------------------------------------------------------------
 // جلوگیری از تداخل دیتای رستوران‌ها
-userRouter.use(applyTenantScope);
+userRouter.use(applyBranchScope);
 
 // بررسی مجوز خرد (PBAC): فقط کارمندانی که کد USR-401 دارند عبور می‌کنند
 userRouter.use(requirePermission(PERMISSIONS.USER_MANAGE));

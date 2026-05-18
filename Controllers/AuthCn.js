@@ -1,11 +1,12 @@
 import User from "../Models/UserMd.js";
-import Tenant from "../Models/TenantMd.js";
+import Branch from "../Models/BranchMd.js";
+import Organization from "../Models/OrganizationMd.js";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { catchAsync, HandleERROR } from "vanta-api";
 
 // ------------------------------------------------------------------
-// 1. ورود پرسنل و مدیران (کاربران دارای نام کاربری و رمز عبور)
+// 1. Staff & Admin Login
 // ------------------------------------------------------------------
 export const staffLogin = catchAsync(async (req, res, next) => {
     const { username = null, password = null } = req.body;
@@ -14,7 +15,7 @@ export const staffLogin = catchAsync(async (req, res, next) => {
         return next(new HandleERROR("Username and password are required", 400));
     }
 
-    const user = await User.findOne({ username });
+    const user = await User.findOne({ username, isArchived: false });
     if (!user) {
         return next(new HandleERROR("User not found", 404));
     }
@@ -24,28 +25,33 @@ export const staffLogin = catchAsync(async (req, res, next) => {
         return next(new HandleERROR("Password is incorrect", 401));
     }
 
-    // بررسی وضعیت اشتراک رستوران (اگر کاربر پرسنل رستوران است)
-    if (user.tenantId) {
-        const tenant = await Tenant.findById(user.tenantId);
-        if (!tenant || !tenant.isActive) {
-            return next(new HandleERROR("Your restaurant account is disabled", 403));
+    // Check branch status and organization subscription for branch staff
+    if (user.branchId) {
+        const branch = await Branch.findById(user.branchId);
+        if (!branch || !branch.isActive) {
+            return next(new HandleERROR("Your branch account is disabled", 403));
         }
-        if (tenant.subscription && new Date(tenant.subscription.expiresAt) < new Date()) {
+
+        const org = await Organization.findById(branch.organizationId);
+        if (!org || org.subscription.status !== "active") {
+            return next(new HandleERROR("Organization subscription is inactive. Please contact support.", 403));
+        }
+        if (org.subscription.expiresAt && new Date(org.subscription.expiresAt) < new Date()) {
             return next(new HandleERROR("Subscription expired. Please contact support.", 403));
         }
     }
 
-    // تولید توکن مخصوص پرسنل
     const token = jwt.sign(
         {
             id: user._id,
-            accountType: "user", // تعیین نوع اکانت برای میدل‌ور
+            accountType: "user",
             role: user.role,
-            tenantId: user.tenantId,
+            organizationId: user.organizationId,
+            branchId: user.branchId,
             forcePasswordChange: user.forcePasswordChange
         },
         process.env.JWT_SECRET,
-        { expiresIn: "30d" } // تاریخ انقضای توکن
+        { expiresIn: "30d" }
     );
 
     return res.status(200).json({
@@ -57,7 +63,8 @@ export const staffLogin = catchAsync(async (req, res, next) => {
                 id: user._id,
                 username: user.username,
                 role: user.role,
-                tenantId: user.tenantId,
+                organizationId: user.organizationId,
+                branchId: user.branchId,
                 forcePasswordChange: user.forcePasswordChange
             }
         }
@@ -65,10 +72,9 @@ export const staffLogin = catchAsync(async (req, res, next) => {
 });
 
 // ------------------------------------------------------------------
-// 2. دریافت اطلاعات پروفایل کاربری که لاگین کرده است (مشترک)
+// 2. Get Current Logged-In User Profile
 // ------------------------------------------------------------------
 export const getMe = catchAsync(async (req, res, next) => {
-    // اطلاعات کاربر یا مشتری توسط میدل‌ور protect در req ذخیره شده است
     if (req.user) {
         return res.status(200).json({
             success: true,

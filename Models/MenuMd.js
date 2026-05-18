@@ -1,22 +1,25 @@
 import mongoose from "mongoose";
 
 const menuItemSchema = new mongoose.Schema({
-    tenantId: {
+    branchId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Tenant",
-        required: [true, "Tenant ID is required"]
+        ref: "Branch",
+        required: [true, "Branch ID is required"]
     },
     name: {
         type: String,
-        required: [true, "Item name is required"]
+        required: [true, "Item name is required"],
+        trim: true
     },
     price: {
         type: Number,
-        required: [true, "Price is required"]
+        required: [true, "Price is required"],
+        min: [0, "Price cannot be negative"]
     },
     category: {
         type: String,
-        required: [true, "Category is required"]
+        required: [true, "Category is required"],
+        trim: true
     },
     image: {
         type: String,
@@ -24,13 +27,17 @@ const menuItemSchema = new mongoose.Schema({
     },
     isAvailable: {
         type: Boolean,
-        default: true // برای زمانی که غذا در همان روز موقتاً تمام شده است (Sold Out)
+        default: true
     },
     isArchived: {
         type: Boolean,
-        default: false // برای زمانی که مدیر کلا غذا را از منوی رستوران حذف/بایگانی می‌کند
+        default: false
     }
 }, { timestamps: true });
+
+// Indexes
+menuItemSchema.index({ branchId: 1, isArchived: 1, isAvailable: 1 });
+menuItemSchema.index({ branchId: 1, category: 1 });
 
 const MenuItem = mongoose.model("MenuItem", menuItemSchema);
 export default MenuItem;

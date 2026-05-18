@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
 
 const transactionSchema = new mongoose.Schema({
-    tenantId: {
+    organizationId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Tenant",
-        required: [true, "Tenant ID is required"]
+        ref: "Organization",
+        required: [true, "Organization ID is required"]
     },
     amount: {
         type: Number,
@@ -24,6 +24,10 @@ const transactionSchema = new mongoose.Schema({
         type: String
     }
 }, { timestamps: true });
+
+// Indexes
+transactionSchema.index({ organizationId: 1, status: 1 });
+transactionSchema.index({ type: 1, createdAt: -1 });
 
 const Transaction = mongoose.model("Transaction", transactionSchema);
 export default Transaction;
