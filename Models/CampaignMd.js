@@ -52,6 +52,10 @@ const campaignSchema = new mongoose.Schema({
         maxDiscountAmount: { type: Number, default: 0 },
         validityDays: { type: Number, default: 7 },
         posCode: { type: String, default: null } // کد تعریف شده در سیستم حسابداری رستوران
+    }],
+    discountPools: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "DiscountPool"
     }]
 }, { timestamps: true });
 

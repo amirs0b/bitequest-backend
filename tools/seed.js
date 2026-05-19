@@ -38,6 +38,8 @@ import Cart from "../Models/CartMd.js";
 import Order from "../Models/OrderMd.js";
 import AuditLog from "../Models/AuditLogMd.js";
 import Transaction from "../Models/TransactionMd.js";
+import DiscountPool from "../Models/DiscountPoolMd.js";
+import CustomerVisit from "../Models/CustomerVisitMd.js";
 
 // ── Helpers ─────────────────────────────
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -68,6 +70,20 @@ const FOOD_NAMES = {
     "غذای ایرانی": ["چلوکباب کوبیده", "جوجه‌کباب", "قورمه‌سبزی", "قیمه بادمجان", "زرشک‌پلو با مرغ", "آبگوشت سنتی", "باقالی‌پلو با گوشت"],
     "سوشی": ["سوشی سالمون", "سوشی میگو", "رول کالیفرنیا", "سوشی ادو", "ساشیمی مخلوط"]
 };
+
+// Rich menu item data for AI quiz generation
+const FOOD_DETAILS = {
+    "پیتزا پپرونی": { desc: "پیتزا با پپرونی تازه و پنیر موزارلا", ingredients: ["خمیر پیتزا", "سس گوجه", "پپرونی", "پنیر موزارلا"], weight: "450 گرم", prepTime: 20, tags: ["پرفروش"], cal: 350, protein: 15, carbs: 40, fat: 18 },
+    "پیتزا مارگاریتا": { desc: "پیتزا کلاسیک ایتالیایی با ریحان تازه", ingredients: ["خمیر پیتزا", "سس گوجه", "پنیر موزارلا", "ریحان"], weight: "400 گرم", prepTime: 18, tags: ["کلاسیک"], cal: 300, protein: 12, carbs: 38, fat: 14 },
+    "چیزبرگر کلاسیک": { desc: "برگر دست‌ساز با سس مخصوص خانگی", ingredients: ["گوشت تازه", "نان بریوش", "کاهو", "گوجه", "پنیر چدار"], weight: "280 گرم", prepTime: 15, tags: ["پرفروش", "محبوب"], cal: 550, protein: 30, carbs: 35, fat: 28 },
+    "دبل برگر": { desc: "دو لایه گوشت با پنیر ذوب شده", ingredients: ["گوشت تازه", "نان", "پنیر", "سس مخصوص", "خیارشور"], weight: "380 گرم", prepTime: 18, tags: ["پرفروش"], cal: 750, protein: 42, carbs: 40, fat: 38 },
+    "چلوکباب کوبیده": { desc: "کباب کوبیده سنتی با برنج ایرانی", ingredients: ["گوشت گوسفند", "پیاز", "برنج ایرانی", "کره", "گوجه کبابی"], weight: "500 گرم", prepTime: 25, tags: ["سنتی", "محبوب"], cal: 650, protein: 35, carbs: 60, fat: 25 },
+    "قورمه‌سبزی": { desc: "خورشت سنتی ایرانی با سبزیجات معطر", ingredients: ["گوشت", "سبزی قورمه", "لوبیا قرمز", "لیمو عمانی"], weight: "400 گرم", prepTime: 45, tags: ["سنتی"], cal: 450, protein: 28, carbs: 30, fat: 22 },
+    "سالاد سزار": { desc: "سالاد تازه با سس سزار خانگی", ingredients: ["کاهو رومی", "نان تست", "پنیر پارمزان", "سس سزار"], weight: "300 گرم", prepTime: 10, tags: ["سالم", "سبک"], cal: 200, protein: 8, carbs: 15, fat: 12 },
+    "تیرامیسو": { desc: "دسر ایتالیایی با قهوه اسپرسو", ingredients: ["پنیر ماسکارپونه", "بیسکویت", "قهوه", "کاکائو"], weight: "180 گرم", prepTime: 15, tags: ["دسر", "محبوب"], cal: 350, protein: 6, carbs: 40, fat: 18 },
+};
+
+const DEFAULT_MENU_TAGS = ["جدید", "تند", "پرفروش", "محبوب", "سبک", "سنتی", "ویژه"];
 
 const QUIZ_QUESTIONS = [
     { q: "پایتخت ایران کجاست؟", opts: ["تهران", "اصفهان", "شیراز", "تبریز"], correct: 0 },
@@ -256,18 +272,28 @@ async function seed() {
                 }
             }
 
-            // ── Menu Items (~50 per branch) ──
+            // ── Menu Items (~50 per branch) with rich fields ──
             const branchMenuItems = [];
             for (const cat of FOOD_CATEGORIES) {
                 const foods = FOOD_NAMES[cat] || [];
                 for (const foodName of foods) {
-                    const item = await MenuItem.create({
+                    const details = FOOD_DETAILS[foodName];
+                    const itemData = {
                         branchId: branch._id,
                         name: foodName,
                         price: rand(50, 800) * 1000,
                         category: cat,
                         isAvailable: Math.random() > 0.08,
-                    });
+                        description: details ? details.desc : `${foodName} مخصوص رستوران`,
+                        ingredients: details ? details.ingredients : [foodName],
+                        weight: details ? details.weight : `${rand(150, 500)} گرم`,
+                        preparationTime: details ? details.prepTime : rand(10, 40),
+                        tags: details ? details.tags : [pick(DEFAULT_MENU_TAGS)],
+                        nutritionalInfo: details
+                            ? { calories: details.cal, protein: details.protein, carbs: details.carbs, fat: details.fat }
+                            : { calories: rand(150, 800), protein: rand(5, 40), carbs: rand(10, 60), fat: rand(5, 35) }
+                    };
+                    const item = await MenuItem.create(itemData);
                     branchMenuItems.push(item);
                 }
             }
@@ -544,6 +570,92 @@ async function seed() {
     console.log(`   ✓ ${auditDocs.length} audit logs`);
 
     // ═══════════════════════════════════
+    // 9. DISCOUNT POOLS (for active campaigns)
+    // ═══════════════════════════════════
+    console.log("\n💰 Creating discount pools...");
+    const discountTypes = ["universal", "limited", "oneTime", "timeBased", "smartReturn"];
+    let totalDiscountPools = 0;
+
+    for (const campInfo of activeCampaigns) {
+        const camp = campInfo.campaign;
+        const poolType = pick(discountTypes);
+        const poolData = {
+            branchId: camp.branchId,
+            campaignId: camp._id,
+            type: poolType,
+            discountPercentage: rand(10, 30),
+            maxDiscountAmount: rand(30, 150) * 1000,
+            posCode: `DP-${rand(100, 999)}`,
+        };
+
+        if (poolType === "universal") {
+            poolData.universalCode = `WELCOME${rand(10, 99)}`;
+        } else if (poolType === "limited" || poolType === "oneTime") {
+            const total = rand(20, 100);
+            const used = rand(0, Math.floor(total * 0.6));
+            poolData.totalCodes = total;
+            poolData.remainingCodes = total - used;
+            poolData.codes = Array.from({ length: total }, (_, i) => ({
+                code: `DC-${rand(10000, 99999)}`,
+                isUsed: i < used,
+                usedAt: i < used ? daysAgo(rand(0, 14)) : null,
+            }));
+        } else if (poolType === "timeBased") {
+            poolData.schedule = {
+                validDays: WEEK_DAYS.slice(0, rand(4, 7)),
+                validHours: { start: "11:00", end: "22:00" },
+                startDate: daysAgo(7),
+                endDate: daysFromNow(30),
+            };
+        } else if (poolType === "smartReturn") {
+            poolData.returnConfig = {
+                baseDiscount: rand(10, 15),
+                urgencyDiscount: rand(20, 30),
+                urgencyWindowHours: pick([12, 24, 48]),
+                targetDaysSinceLastVisit: pick([7, 14, 21, 30]),
+            };
+        }
+
+        const pool = await DiscountPool.create(poolData);
+        // Link pool to campaign
+        await Campaign.findByIdAndUpdate(camp._id, { $push: { discountPools: pool._id } });
+        totalDiscountPools++;
+    }
+    console.log(`   ✓ ${totalDiscountPools} discount pools created`);
+
+    // ═══════════════════════════════════
+    // 10. CUSTOMER VISITS (RFM data)
+    // ═══════════════════════════════════
+    console.log("\n📊 Creating customer visit records...");
+    const visitMap = new Map(); // key: `customerId-branchId`
+
+    // Build visit records from existing orders (sample ~500 unique combinations)
+    for (const brInfo of allBranches) {
+        const branchCustomers = customers.slice(0, rand(80, 200));
+        for (const cust of branchCustomers) {
+            const key = `${cust._id}-${brInfo.branch._id}`;
+            if (visitMap.has(key)) continue;
+
+            const visits = rand(1, 30);
+            const spent = rand(100, 2000) * 1000 * visits;
+            visitMap.set(key, {
+                customerId: cust._id,
+                branchId: brInfo.branch._id,
+                firstVisit: daysAgo(rand(30, 180)),
+                lastVisit: daysAgo(rand(0, 30)),
+                totalVisits: visits,
+                totalSpent: spent,
+                averageOrderValue: Math.round(spent / visits),
+                isSubscribedToSMS: Math.random() > 0.1,
+            });
+        }
+    }
+
+    const visitDocs = Array.from(visitMap.values());
+    await CustomerVisit.insertMany(visitDocs, { ordered: false }).catch(() => {});
+    console.log(`   ✓ ${visitDocs.length} customer visit records`);
+
+    // ═══════════════════════════════════
     // SUMMARY
     // ═══════════════════════════════════
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -561,6 +673,8 @@ async function seed() {
     console.log(`  📦 Orders: ${totalOrders.toLocaleString()}`);
     console.log(`  🎟  Vouchers: ${(totalVouchers + activeVoucherDocs.length).toLocaleString()}`);
     console.log(`  📝 Audit logs: ${auditDocs.length}`);
+    console.log(`  💰 Discount pools: ${totalDiscountPools}`);
+    console.log(`  📊 Customer visits: ${visitDocs.length}`);
     console.log("═".repeat(50));
 
     await mongoose.disconnect();

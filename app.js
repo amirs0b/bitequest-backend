@@ -22,6 +22,7 @@ import superAdminRouter from "./Routes/SuperAdmin.js";
 import ticketRouter from "./Routes/Ticket.js";
 import crmRouter from "./Routes/Crm.js";
 import auditLogRouter from "./Routes/AuditLog.js";
+import voucherRouter from "./Routes/Voucher.js";
 
 const __filename = fileURLToPath(import.meta.url);
 export const __dirname = path.dirname(__filename);
@@ -54,6 +55,7 @@ app.use("/api/v1/qrcode", qrRouter);
 app.use("/api/v1/tickets", ticketRouter);
 app.use("/api/v1/superadmin", superAdminRouter);
 app.use("/api/v1/audit-logs", auditLogRouter);
+app.use("/api/v1/vouchers", voucherRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 

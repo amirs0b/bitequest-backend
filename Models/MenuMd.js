@@ -21,6 +21,30 @@ const menuItemSchema = new mongoose.Schema({
         required: [true, "Category is required"],
         trim: true
     },
+    description: {
+        type: String,
+        default: ""
+    },
+    ingredients: [{
+        type: String
+    }],
+    weight: {
+        type: String,
+        default: ""
+    },
+    preparationTime: {
+        type: Number,
+        default: null
+    },
+    tags: [{
+        type: String
+    }],
+    nutritionalInfo: {
+        calories: { type: Number, default: null },
+        protein: { type: Number, default: null },
+        carbs: { type: Number, default: null },
+        fat: { type: Number, default: null }
+    },
     image: {
         type: String,
         default: ""
