@@ -45,8 +45,7 @@ const organizationSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-// Indexes
-organizationSchema.index({ slug: 1 });
+// Indexes (slug index is auto-created by unique:true)
 organizationSchema.index({ "subscription.status": 1 });
 organizationSchema.index({ isArchived: 1, "subscription.status": 1 });
 
