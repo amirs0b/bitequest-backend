@@ -102,6 +102,24 @@ const QUIZ_QUESTIONS = [
 
 const WEEK_DAYS = ["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday", "friday"];
 
+// HR data pools for seeding employee records
+const FIRST_NAMES = ["علی", "محمد", "رضا", "حسین", "امیر", "سارا", "مریم", "فاطمه", "زهرا", "نگار", "کامران", "بهنام", "سینا", "نیما", "آرش"];
+const LAST_NAMES = ["احمدی", "محمدی", "رضایی", "حسینی", "کریمی", "موسوی", "صادقی", "جعفری", "علیزاده", "نجفی", "قاسمی", "شریفی", "مرادی", "تهرانی"];
+const POSITIONS = {
+    owner: "مدیرعامل",
+    manager: ["مدیر شعبه", "مدیر عملیات", "مدیر بازاریابی"],
+    cashier: ["صندوقدار", "حسابدار"],
+    staff: ["گارسون", "سرآشپز", "دستیار آشپز", "مسئول سالن"]
+};
+const DEPARTMENTS = {
+    owner: "مدیریت",
+    manager: "مدیریت",
+    cashier: "مالی",
+    staff: "عملیات"
+};
+const genEmployeeCode = (n) => `EMP-${String(n).padStart(4, "0")}`;
+const genHireDate = () => { const d = new Date(); d.setFullYear(d.getFullYear() - rand(0, 5)); d.setMonth(rand(0, 11)); return d; };
+
 const ORG_DATA = [
     // ── Chains (2) ──
     { name: "زنجیره پیتزا ایتالیانو", slug: "italiano-pizza", plan: "enterprise", branches: [
@@ -240,6 +258,21 @@ async function seed() {
                 forcePasswordChange: false,
                 organizationId: org._id,
                 branchId: branch._id,
+                employeeCode: genEmployeeCode(staffCounter),
+                firstName: pick(FIRST_NAMES),
+                lastName: pick(LAST_NAMES),
+                nationalId: `${rand(1000000000, 9999999999)}`,
+                phone: `09${rand(100000000, 999999999)}`,
+                email: `owner_${orgData.slug}@bitequest.ir`,
+                position: POSITIONS.owner,
+                department: DEPARTMENTS.owner,
+                hireDate: genHireDate(),
+                employmentStatus: "active",
+                emergencyContact: {
+                    name: pick(FIRST_NAMES) + " " + pick(LAST_NAMES),
+                    phone: `09${rand(100000000, 999999999)}`,
+                    relationship: pick(["همسر", "پدر", "مادر", "برادر", "خواهر"])
+                }
             });
             allStaff.push(owner);
 
@@ -259,6 +292,7 @@ async function seed() {
                         ? ["MNU-101", "FIN-301", "ORD-302"]
                         : ["MNU-101"];
 
+                    const positionList = Array.isArray(POSITIONS[sr.role]) ? POSITIONS[sr.role] : [POSITIONS[sr.role]];
                     const u = await User.create({
                         username: `${sr.role}_${staffCounter}`,
                         password: bcryptjs.hashSync("Staff@123", 10),
@@ -267,6 +301,15 @@ async function seed() {
                         forcePasswordChange: true,
                         organizationId: org._id,
                         branchId: branch._id,
+                        employeeCode: genEmployeeCode(staffCounter),
+                        firstName: pick(FIRST_NAMES),
+                        lastName: pick(LAST_NAMES),
+                        nationalId: `${rand(1000000000, 9999999999)}`,
+                        phone: `09${rand(100000000, 999999999)}`,
+                        position: pick(positionList),
+                        department: DEPARTMENTS[sr.role] || "عملیات",
+                        hireDate: genHireDate(),
+                        employmentStatus: "active",
                     });
                     allStaff.push(u);
                 }

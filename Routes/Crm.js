@@ -3,7 +3,9 @@ import {
     getRestaurantCustomers,
     getCustomerProfile,
     getCustomerSegments,
-    sendBulkSms
+    sendBulkSms,
+    getAtRiskCustomers,
+    getTopCustomers
 } from "../Controllers/CrmCn.js";
 import { protect } from "../Middlewares/AuthMw.js";
 import { applyBranchScope } from "../Middlewares/TenantScopeMw.js";
@@ -25,5 +27,11 @@ crmRouter.get("/customers/:customerId", requirePermission(PERMISSIONS.CRM_VIEW),
 // دسترسی ارسال پیامک گروهی (CRM-502)
 // -----------------------------------------------------------
 crmRouter.post("/send-bulk-sms", requirePermission(PERMISSIONS.CRM_SMS), sendBulkSms);
+
+// -----------------------------------------------------------
+// RFM-based insights
+// -----------------------------------------------------------
+crmRouter.get("/at-risk", requirePermission(PERMISSIONS.CRM_VIEW), getAtRiskCustomers);
+crmRouter.get("/top-customers", requirePermission(PERMISSIONS.CRM_VIEW), getTopCustomers);
 
 export default crmRouter;
