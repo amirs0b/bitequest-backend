@@ -4,6 +4,7 @@ import Organization from "../Models/OrganizationMd.js";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { catchAsync, HandleERROR } from "vanta-api";
+import { logEvent } from "./EventCn.js";
 
 // ------------------------------------------------------------------
 // 1. Staff & Admin Login
@@ -53,6 +54,17 @@ export const staffLogin = catchAsync(async (req, res, next) => {
         process.env.JWT_SECRET,
         { expiresIn: "30d" }
     );
+
+    logEvent({
+        branchId: user.branchId || null,
+        actorId: user._id,
+        actorType: "User",
+        action: "staff_login",
+        resource: "Auth",
+        metadata: { role: user.role, username: user.username },
+        ip: req.ip,
+        userAgent: req.headers["user-agent"]
+    });
 
     return res.status(200).json({
         success: true,

@@ -46,13 +46,15 @@ const campaignSchema = new mongoose.Schema({
         options: [{ type: String, required: true }],
         correctOptionIndex: { type: Number, required: true }
     }],
+    // Quiz-based reward tiers: used by playCampaign to issue vouchers on answer submission
     tiers: [{
         requiredCorrectAnswers: { type: Number, required: true },
         discountPercentage: { type: Number, required: true },
         maxDiscountAmount: { type: Number, default: 0 },
         validityDays: { type: Number, default: 7 },
-        posCode: { type: String, default: null } // کد تعریف شده در سیستم حسابداری رستوران
+        posCode: { type: String, default: null }
     }],
+    // Programmatic discount pools: used by return engine and DiscountBank controller
     discountPools: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "DiscountPool"

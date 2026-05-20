@@ -1,12 +1,25 @@
 import Campaign from "../Models/CampaignMd.js";
 import Voucher from "../Models/VoucherMd.js";
 import ApiFeatures, { catchAsync, HandleERROR } from "vanta-api";
+import { logEvent } from "./EventCn.js";
 
 // ------------------------------------------------------------------
 // 1. ساخت کمپین جدید
 // ------------------------------------------------------------------
 export const createCampaign = catchAsync(async (req, res, next) => {
     const campaign = await Campaign.create(req.body);
+
+    logEvent({
+        branchId: campaign.branchId,
+        actorId: req.user._id,
+        actorType: "User",
+        action: "campaign_created",
+        resource: "Campaign",
+        resourceId: campaign._id,
+        metadata: { title: campaign.title },
+        ip: req.ip,
+        userAgent: req.headers["user-agent"]
+    });
 
     return res.status(201).json({
         success: true,
@@ -90,6 +103,18 @@ export const archiveCampaign = catchAsync(async (req, res, next) => {
 
     const campaign = await Campaign.findOneAndUpdate(query, { isArchived: true, isActive: false }, { new: true });
     if (!campaign) return next(new HandleERROR("Campaign not found", 404));
+
+    logEvent({
+        branchId: campaign.branchId,
+        actorId: req.user._id,
+        actorType: "User",
+        action: "campaign_archived",
+        resource: "Campaign",
+        resourceId: campaign._id,
+        metadata: { title: campaign.title },
+        ip: req.ip,
+        userAgent: req.headers["user-agent"]
+    });
 
     return res.status(200).json({ success: true, message: "Campaign archived successfully" });
 });

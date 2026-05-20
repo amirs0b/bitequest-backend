@@ -13,7 +13,9 @@
  *   - ~3,000 customers
  *   - 50 active + 300 finished campaigns
  *   - ~150-700 orders/day for last 60 days per branch
- *   - Vouchers, Carts, AuditLogs
+ *   - Vouchers, Carts, AuditLogs, DiscountPools, CustomerVisits
+ *   - Events (login + create + archive samples)
+ *   - Subscriptions (one per organization)
  */
 
 import mongoose from "mongoose";
@@ -40,6 +42,8 @@ import AuditLog from "../Models/AuditLogMd.js";
 import Transaction from "../Models/TransactionMd.js";
 import DiscountPool from "../Models/DiscountPoolMd.js";
 import CustomerVisit from "../Models/CustomerVisitMd.js";
+import Event from "../Models/EventMd.js";
+import Subscription from "../Models/SubscriptionMd.js";
 
 // ── Helpers ─────────────────────────────
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -699,6 +703,80 @@ async function seed() {
     console.log(`   ✓ ${visitDocs.length} customer visit records`);
 
     // ═══════════════════════════════════
+    // 11. EVENTS (sample login + action events)
+    // ═══════════════════════════════════
+    console.log("\n⚡ Creating event log samples...");
+    const eventActions = ["staff_login", "campaign_created", "campaign_archived", "menu_item_created", "menu_item_updated", "voucher_redeemed", "permission_denied"];
+    const eventDocs = [];
+
+    for (let i = 0; i < 300; i++) {
+        const brInfo = pick(allBranches);
+        const staffMember = pick(allStaff.filter(s => s.branchId && s.branchId.toString() === brInfo.branch._id.toString()) || [brInfo.owner]);
+        const action = pick(eventActions);
+        const isCustomerAction = action === "voucher_redeemed";
+        const customer = pick(customers);
+
+        eventDocs.push({
+            branchId: brInfo.branch._id,
+            actorId: isCustomerAction ? customer._id : (staffMember?._id || brInfo.owner._id),
+            actorType: isCustomerAction ? "Customer" : "User",
+            action,
+            resource: action.startsWith("campaign") ? "Campaign" : action.startsWith("menu") ? "MenuItem" : action.startsWith("voucher") ? "Voucher" : "Auth",
+            metadata: { seeded: true, detail: `Seed event #${i + 1}` },
+            ip: `192.168.${rand(1, 5)}.${rand(1, 254)}`,
+            userAgent: "seed-script/1.0",
+            createdAt: daysAgo(rand(0, 60)),
+        });
+    }
+    await Event.insertMany(eventDocs, { ordered: false }).catch(() => {});
+    console.log(`   ✓ ${eventDocs.length} event records`);
+
+    // ═══════════════════════════════════
+    // 12. SUBSCRIPTIONS (one per organization)
+    // ═══════════════════════════════════
+    console.log("\n💳 Creating subscriptions...");
+    const planMap = { enterprise: "enterprise", pro: "pro", basic: "basic", trial: "trial" };
+    const subscriptionDocs = [];
+
+    for (const brInfo of allBranches) {
+        // Use the first branch per org to get org info; create one subscription per unique org
+        subscriptionDocs.push({ _orgId: brInfo.org._id, _plan: brInfo.org.subscription?.plan || "basic" });
+    }
+
+    // Deduplicate by org
+    const seenOrgs = new Set();
+    const uniqueSubDocs = [];
+    for (const doc of subscriptionDocs) {
+        const key = doc._orgId.toString();
+        if (seenOrgs.has(key)) continue;
+        seenOrgs.add(key);
+        uniqueSubDocs.push({
+            organizationId: doc._orgId,
+            plan: planMap[doc._plan] || "basic",
+            status: "active",
+            startDate: daysAgo(rand(30, 365)),
+            expiresAt: daysFromNow(rand(30, 365)),
+            billingCycle: Math.random() > 0.5 ? "yearly" : "monthly",
+            features: {
+                maxBranches: doc._plan === "enterprise" ? 10 : doc._plan === "pro" ? 3 : 1,
+                maxStaffPerBranch: doc._plan === "enterprise" ? 50 : doc._plan === "pro" ? 20 : 5,
+                maxCampaigns: doc._plan === "enterprise" ? 50 : doc._plan === "pro" ? 15 : 3,
+                smsIncluded: doc._plan === "enterprise" ? 1000 : doc._plan === "pro" ? 300 : 0,
+                analyticsLevel: doc._plan === "basic" || doc._plan === "trial" ? "basic" : "advanced",
+            },
+            paymentHistory: [{
+                amount: doc._plan === "enterprise" ? 5000000 : doc._plan === "pro" ? 3000000 : 1500000,
+                paidAt: daysAgo(rand(30, 90)),
+                method: pick(["card", "bank_transfer"]),
+                transactionId: `TXN-SUB-${rand(10000, 99999)}`,
+            }],
+        });
+    }
+
+    await Subscription.insertMany(uniqueSubDocs, { ordered: false }).catch(() => {});
+    console.log(`   ✓ ${uniqueSubDocs.length} subscriptions created`);
+
+    // ═══════════════════════════════════
     // SUMMARY
     // ═══════════════════════════════════
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -718,6 +796,8 @@ async function seed() {
     console.log(`  📝 Audit logs: ${auditDocs.length}`);
     console.log(`  💰 Discount pools: ${totalDiscountPools}`);
     console.log(`  📊 Customer visits: ${visitDocs.length}`);
+    console.log(`  ⚡ Events: ${eventDocs.length}`);
+    console.log(`  💳 Subscriptions: ${uniqueSubDocs.length}`);
     console.log("═".repeat(50));
 
     await mongoose.disconnect();

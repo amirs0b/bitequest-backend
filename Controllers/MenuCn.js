@@ -1,5 +1,6 @@
 import MenuItem from "../Models/MenuMd.js";
 import ApiFeatures, { catchAsync, HandleERROR } from "vanta-api";
+import { logEvent } from "./EventCn.js";
 
 // ------------------------------------------------------------------
 // 1. افزودن غذای جدید به منو (دسترسی: superAdmin, owner, manager)
@@ -19,7 +20,19 @@ export const createMenuItem = catchAsync(async (req, res, next) => {
         name,
         price,
         category,
-        image: req.body.image // آدرسی که از ریکوئست یا آپلودر آمده است ثبت می‌شود
+        image: req.body.image
+    });
+
+    logEvent({
+        branchId: newMenuItem.branchId,
+        actorId: req.user._id,
+        actorType: "User",
+        action: "menu_item_created",
+        resource: "MenuItem",
+        resourceId: newMenuItem._id,
+        metadata: { name: newMenuItem.name, category: newMenuItem.category },
+        ip: req.ip,
+        userAgent: req.headers["user-agent"]
     });
 
     return res.status(201).json({
@@ -115,6 +128,18 @@ export const updateMenuItem = catchAsync(async (req, res, next) => {
     if (!item) {
         return next(new HandleERROR("Item not found or you do not have permission to modify it", 404));
     }
+
+    logEvent({
+        branchId: item.branchId,
+        actorId: req.user._id,
+        actorType: "User",
+        action: "menu_item_updated",
+        resource: "MenuItem",
+        resourceId: item._id,
+        metadata: { name: item.name },
+        ip: req.ip,
+        userAgent: req.headers["user-agent"]
+    });
 
     return res.status(200).json({
         success: true,

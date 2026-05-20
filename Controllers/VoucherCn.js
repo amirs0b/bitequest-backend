@@ -1,5 +1,6 @@
 import Voucher from "../Models/VoucherMd.js";
 import { catchAsync, HandleERROR } from "vanta-api";
+import { logEvent } from "./EventCn.js";
 
 // ------------------------------------------------------------------
 // 1. Get customer's vouchers for a branch (used + unused)
@@ -57,6 +58,18 @@ export const redeemVoucher = catchAsync(async (req, res, next) => {
     voucher.isUsed = true;
     voucher.usedAt = new Date();
     await voucher.save();
+
+    logEvent({
+        branchId: voucher.branchId,
+        actorId: req.customer._id,
+        actorType: "Customer",
+        action: "voucher_redeemed",
+        resource: "Voucher",
+        resourceId: voucher._id,
+        metadata: { code: voucher.code, discountPercentage: voucher.discountPercentage },
+        ip: req.ip,
+        userAgent: req.headers["user-agent"]
+    });
 
     return res.status(200).json({
         success: true,
